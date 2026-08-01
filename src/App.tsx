@@ -16,9 +16,9 @@ import { SnapItem, VocabWord, StudentProfile } from "./types";
 import { SAMPLE_SNAP_ITEMS } from "./data/presetData";
 import { GraduationCap, ArrowLeft, LayoutGrid, Shield, CreditCard, Smartphone, Apple } from "lucide-react";
 import { Language, translations } from "./utils/i18n";
-import appStoreBadgeImg from "./assets/IMG/ICON/App_Store_badge.png";
-import googlePlayBadgeImg from "./assets/IMG/ICON/Google_Play_badge.png";
-import iosAndroidImg from "./assets/IMG/ICON/iOS_Android.png";
+const appStoreBadgeImg = "/assets/IMG/ICON/App_Store_badge.png";
+const googlePlayBadgeImg = "/assets/IMG/ICON/Google_Play_badge.png";
+const iosAndroidImg = "/assets/IMG/ICON/iOS_Android.png";
 
 type TabType = "welcome" | "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
 

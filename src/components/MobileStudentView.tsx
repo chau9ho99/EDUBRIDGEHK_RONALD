@@ -42,9 +42,9 @@ import { SnapItem, VocabWord, StudentProfile } from "../types";
 import { Language, translations, toSimplifiedChinese, getVocabMeaning } from "../utils/i18n";
 import { speakText, stopSpeech } from "../utils/speechUtils";
 import { getRandomDSEVocab } from "../data/dseVocabDatabase";
-import appStoreBadgeImg from "../assets/IMG/ICON/App_Store_badge.png";
-import googlePlayBadgeImg from "../assets/IMG/ICON/Google_Play_badge.png";
-import iosAndroidImg from "../assets/IMG/ICON/iOS_Android.png";
+const appStoreBadgeImg = "/assets/IMG/ICON/App_Store_badge.png";
+const googlePlayBadgeImg = "/assets/IMG/ICON/Google_Play_badge.png";
+const iosAndroidImg = "/assets/IMG/ICON/iOS_Android.png";
 
 interface MobileStudentViewProps {
   snapItems: SnapItem[];
@@ -445,7 +445,7 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
           ocrText: "Hong Kong secondary school students need to master advanced vocabulary and grammar structures for the HKDSE English Language examination.",
           imageUrl: base64Str,
           hkdseContext: "考評局 Level 5** 高頻核心考題",
-          translation: "香港中學生需要掌握進階詞彙及語法結構以應對香港中學文憑試 (HKDSE) 英文科考試。",
+          translation: "香港中學生需要掌握進階詞彙及語法結構以應對香港中��文憑試 (HKDSE) 英文科考試。",
           vocabulary: getRandomDSEVocab(3, []),
           grammarNotes: ["Complex Sentence Structure", "Passive Voice"],
           speechScript: "Hong Kong secondary school students need to master advanced vocabulary and grammar structures for the HKDSE English Language examination.",

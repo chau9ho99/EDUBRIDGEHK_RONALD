@@ -11,7 +11,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Language } from "../utils/i18n";
-import gatewayImg from "../assets/IMG/ICON/gateway.png";
+const gatewayImg = "/assets/IMG/ICON/gateway.png";
 
 interface SubscriptionModalProps {
   isOpen: boolean;
