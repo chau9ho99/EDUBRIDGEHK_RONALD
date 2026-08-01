@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
+import { ProductLaunchShowcase } from "./components/ProductLaunchShowcase";
 import { HomeHub } from "./components/HomeHub";
 import { SnapAndLearn } from "./components/SnapAndLearn";
 import { GroupDiscussion } from "./components/GroupDiscussion";
@@ -9,19 +10,20 @@ import { AdminConsole } from "./components/AdminConsole";
 import { MobileStudentView } from "./components/MobileStudentView";
 import { HighlightReaderPopover } from "./components/HighlightReaderPopover";
 import { StudentProfileModal } from "./components/StudentProfileModal";
+import { PromoShowcaseModal } from "./components/PromoShowcaseModal";
 import { SnapItem, VocabWord, StudentProfile } from "./types";
 import { SAMPLE_SNAP_ITEMS } from "./data/presetData";
 import { GraduationCap, ArrowLeft, LayoutGrid, Shield } from "lucide-react";
 import { Language, translations } from "./utils/i18n";
 
-type TabType = "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
+type TabType = "welcome" | "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
 
 export default function App() {
   const [activeTab, setActiveTabState] = useState<TabType>(() => {
     if (typeof window !== "undefined" && (window.location.pathname === "/admin" || window.location.hash === "#admin")) {
       return "admin";
     }
-    return "home";
+    return "welcome";
   });
   const [investorMode, setInvestorMode] = useState<boolean>(true);
   const [isMobileMode, setIsMobileMode] = useState<boolean>(false);
@@ -48,6 +50,8 @@ export default function App() {
       return true;
     }
   });
+
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState<boolean>(false);
 
   const handleSaveStudentProfile = (profile: StudentProfile) => {
     setStudentProfile(profile);
@@ -209,6 +213,7 @@ export default function App() {
         setLang={setLang}
         studentProfile={studentProfile}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenPromoModal={() => setIsPromoModalOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -223,15 +228,16 @@ export default function App() {
             lang={lang}
             studentProfile={studentProfile}
             onOpenProfileModal={() => setIsProfileModalOpen(true)}
+            onOpenPromoModal={() => setIsPromoModalOpen(true)}
           />
         ) : (
           <>
             {/* Top Sticky Breadcrumb Bar for Feature Sub-Pages */}
-            {activeTab !== "home" && (
+            {activeTab !== "home" && activeTab !== "welcome" && (
               <div className="bg-black/80 border-b border-white/10 sticky top-[65px] sm:top-[73px] z-40 backdrop-blur-md px-3 sm:px-4 py-2.5">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
                   <button
-                    onClick={() => setActiveTab("home")}
+                    onClick={() => setActiveTab("welcome")}
                     className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-[#00FF88] hover:text-black text-white text-xs font-black uppercase tracking-wider border border-white/20 transition-all shadow-md group shrink-0 active:scale-95"
                   >
                     <ArrowLeft className="w-4 h-4 text-[#00FF88] group-hover:text-black group-hover:-translate-x-1 transition-transform" />
@@ -253,11 +259,20 @@ export default function App() {
               </div>
             )}
 
+            {activeTab === "welcome" && (
+              <ProductLaunchShowcase
+                lang={lang}
+                onEnterApp={(feature) => setActiveTab(feature ? (feature as TabType) : "home")}
+                onOpenPromoModal={() => setIsPromoModalOpen(true)}
+              />
+            )}
+
             {activeTab === "home" && (
               <HomeHub
                 lang={lang}
                 onSelectFeature={(feat) => setActiveTab(feat as TabType)}
                 investorMode={investorMode}
+                onOpenPromoModal={() => setIsPromoModalOpen(true)}
               />
             )}
 
@@ -350,6 +365,19 @@ export default function App() {
         onSaveProfile={handleSaveStudentProfile}
         currentProfile={studentProfile}
         lang={lang}
+      />
+
+      {/* DSE Promo Poster Showcase Modal */}
+      <PromoShowcaseModal
+        isOpen={isPromoModalOpen}
+        onClose={() => setIsPromoModalOpen(false)}
+        lang={lang}
+        onNavigateToFeature={(feature) => {
+          if (feature === "snap") setActiveTab("snap");
+          else if (feature === "oral") setActiveTab("discussion");
+          else if (feature === "knowledge") setActiveTab("knowledge");
+          else if (feature === "discussion") setActiveTab("discussion");
+        }}
       />
     </div>
   );

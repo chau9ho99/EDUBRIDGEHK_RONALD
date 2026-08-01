@@ -17,6 +17,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "20mb" }));
+app.use("/assets", express.static(path.join(process.cwd(), "assets")));
 
 const apiRouter = express.Router();
 
@@ -52,10 +53,12 @@ interface ProviderConfig {
   tutor_chat: "openrouter" | "gemini";
   group_discussion: "openrouter" | "gemini";
   translation: "openrouter" | "gemini";
+  ocr_provider: "groq" | "gemini";
 }
 
 const hasGeminiKey = !!process.env.GEMINI_API_KEY;
 const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
+const hasGroqKey = !!process.env.GROQ_API_KEY;
 
 const defaultProvider: "openrouter" | "gemini" =
   (process.env.PREFERRED_AI_PROVIDER as "openrouter" | "gemini") ||
@@ -67,6 +70,7 @@ const providerConfig: ProviderConfig = {
   tutor_chat: defaultProvider,
   group_discussion: defaultProvider,
   translation: (process.env.PREFERRED_TRANSLATION_PROVIDER as any) || defaultProvider,
+  ocr_provider: (process.env.PREFERRED_OCR_PROVIDER as "groq" | "gemini") || "groq", // Default to Groq
 };
 
 const providerStats = {
@@ -74,7 +78,9 @@ const providerStats = {
   openrouterCount: 0,
   openrouterLimit: 50,
   geminiCount: 0,
+  groqCount: 0,
   openrouterErrors: 0,
+  groqErrors: 0,
   lastUsedProvider: {} as Record<string, string>,
 };
 
@@ -84,8 +90,101 @@ function checkDailyReset() {
     providerStats.todayDate = today;
     providerStats.openrouterCount = 0;
     providerStats.geminiCount = 0;
+    providerStats.groqCount = 0;
     providerStats.openrouterErrors = 0;
+    providerStats.groqErrors = 0;
   }
+}
+
+// Call Groq Vision API (model: qwen/qwen3.6-27b) for ultra-fast OCR & multimodal analysis
+async function callGroqOCR(params: {
+  systemPrompt?: string;
+  prompt?: string;
+  imageBase64?: string;
+  jsonOutput?: boolean;
+}): Promise<{ content: string; modelUsed: string }> {
+  const apiKey = process.env.GROQ_API_KEY || "";
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY environment variable is not configured.");
+  }
+
+  const model = "qwen/qwen3.6-27b";
+  const userContentParts: any[] = [];
+
+  let textPrompt = params.prompt || "Please OCR this image and analyze its educational content for a Hong Kong DSE secondary student.";
+  if (params.systemPrompt) {
+    textPrompt = `${params.systemPrompt}\n\nTask Instructions:\n${textPrompt}`;
+  }
+
+  userContentParts.push({ type: "text", text: textPrompt });
+
+  if (params.imageBase64) {
+    const cleanBase64 = params.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const mimeMatch = params.imageBase64.match(/^data:(image\/\w+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+    userContentParts.push({
+      type: "image_url",
+      image_url: {
+        url: `data:${mimeType};base64,${cleanBase64}`,
+      },
+    });
+  }
+
+  const reqBody: any = {
+    model,
+    messages: [
+      {
+        role: "user",
+        content: userContentParts.length === 1 && typeof userContentParts[0].text === "string" 
+          ? userContentParts[0].text 
+          : userContentParts,
+      },
+    ],
+    temperature: 0.2,
+    max_completion_tokens: 4096,
+  };
+
+  if (params.jsonOutput) {
+    reqBody.response_format = { type: "json_object" };
+    if (typeof userContentParts[0].text === "string" && !userContentParts[0].text.includes("JSON")) {
+      userContentParts[0].text += "\n\nPlease respond strictly in JSON format as a valid JSON object.";
+    }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(reqBody),
+    signal: controller.signal,
+  });
+  clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Groq API returned HTTP ${response.status}: ${errText}`);
+  }
+
+  const resJson = await response.json();
+  if (resJson?.error) {
+    throw new Error(`Groq API error: ${resJson.error.message || JSON.stringify(resJson.error)}`);
+  }
+
+  const choice = resJson?.choices?.[0];
+  const content = choice?.message?.content;
+  if (!content) {
+    throw new Error("Invalid response message content from Groq API.");
+  }
+
+  return {
+    content,
+    modelUsed: resJson.model || model,
+  };
 }
 
 // Call OpenRouter API with robust structure extraction & high-speed model fallback
@@ -406,13 +505,16 @@ apiRouter.get("/admin/provider-status", (req, res) => {
     checkDailyReset();
     const openrouterKey = process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
 
     res.json({
       providers: providerConfig,
       stats: providerStats,
       openrouterKeyConfigured: !!openrouterKey,
       geminiKeyConfigured: !!geminiKey,
+      groqKeyConfigured: !!groqKey,
       openrouterModel: OPENROUTER_FREE_MODEL,
+      groqModel: "qwen/qwen3.6-27b",
     });
   } catch (err: any) {
     console.error("Error in /admin/provider-status:", err);
@@ -423,9 +525,9 @@ apiRouter.get("/admin/provider-status", (req, res) => {
 apiRouter.post("/admin/set-provider", (req, res) => {
   try {
     const { feature, provider } = req.body || {};
-    if (feature && (provider === "openrouter" || provider === "gemini")) {
+    if (feature && (provider === "openrouter" || provider === "gemini" || provider === "groq")) {
       if (feature in providerConfig) {
-        providerConfig[feature as keyof ProviderConfig] = provider;
+        providerConfig[feature as keyof ProviderConfig] = provider as any;
       }
     }
     res.json({ success: true, providers: providerConfig });
@@ -438,7 +540,29 @@ apiRouter.post("/admin/test-provider", async (req, res) => {
   const { provider } = req.body || {};
   const startTime = Date.now();
 
-  if (provider === "openrouter") {
+  if (provider === "groq") {
+    try {
+      const resVal = await callGroqOCR({
+        prompt: "Hello! Please reply in JSON format with key 'status' and value 'operational'.",
+        jsonOutput: true,
+      });
+      const duration = Date.now() - startTime;
+      providerStats.groqCount++;
+      res.json({
+        success: true,
+        message: `Successfully connected to Groq Vision API (model: ${resVal.modelUsed}). Low-latency OCR active.`,
+        responseTimeMs: duration,
+        sampleOutput: resVal.content,
+        modelUsed: resVal.modelUsed,
+      });
+    } catch (err: any) {
+      providerStats.groqErrors++;
+      res.status(500).json({
+        success: false,
+        message: `Groq connection failed: ${err.message}`,
+      });
+    }
+  } else if (provider === "openrouter") {
     try {
       const resVal = await callOpenRouterAPI({
         prompt: "How many r's are in the word 'strawberry'? Answer in 1 short sentence.",
@@ -483,7 +607,9 @@ apiRouter.post("/admin/reset-counter", (req, res) => {
   try {
     providerStats.openrouterCount = 0;
     providerStats.geminiCount = 0;
+    providerStats.groqCount = 0;
     providerStats.openrouterErrors = 0;
+    providerStats.groqErrors = 0;
     res.json({ success: true, stats: providerStats });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -664,11 +790,16 @@ apiRouter.post("/analyze-snap", async (req, res) => {
     const systemPrompt = `You are EduBridge HK AI (港適應 AI 升學導師), an elite English & Language Learning AI tailored specifically for new immigrant students in Hong Kong (Mainland to HK secondary students, S1-S6 preparing for HKDSE).
 Your goal is to help students adapt to the Hong Kong educational curriculum, master HKDSE exam English, understand Hong Kong local educational terminology, and build high-level pronunciation and vocabulary skills.
 
+CRITICAL LANGUAGE DIRECTIVE FOR OCR & TEXT EXTRACTION:
+- If the scanned image or input text contains Chinese or any other non-English language (e.g. Chinese textbooks, school notices, Chinese notes), extract the content and convert/translate the main text into clean, fluent, natural academic English for "ocrText" and "speechScript". This allows Hong Kong secondary students to learn and practice the English version for DSE English exams.
+- The "translation" field must contain the clear Traditional Chinese (繁體中文) version for reference.
+- Extract high-value DSE English vocabulary from the English text for the "vocabulary" field.
+
 Analyze the provided input (photo screenshot/textbook snippet or text).
 Return your response STRICTLY as a JSON object matching this schema:
 {
-  "ocrText": "The extracted or raw text in English/Chinese",
-  "title": "A concise descriptive title for this item (e.g. 'DSE Biology: Cell Structure' or 'HK News: Smart City')",
+  "ocrText": "The extracted text in English (if input was in Chinese or non-English, translate/convert it to fluent English here)",
+  "title": "A concise descriptive title for this item in English (e.g. 'DSE Biology: Cell Structure' or 'HK School Notice')",
   "subjectCategory": "DSE English / DSE Science / HK Social Culture / School Notices / General Vocabulary",
   "hkdseContext": "A brief explanation in Traditional Chinese (繁體中文) on why this text is important for HKDSE candidates or HK school life",
   "translation": "Clear, fluent Traditional Chinese (繁體中文) translation with Hong Kong localized phrasing",
@@ -696,6 +827,30 @@ Return your response STRICTLY as a JSON object matching this schema:
   ]
 }`;
 
+    // Check configured OCR Provider (default: Groq)
+    const preferredOcr = providerConfig.ocr_provider || "groq";
+
+    if (preferredOcr === "groq" && process.env.GROQ_API_KEY) {
+      try {
+        const groqResult = await callGroqOCR({
+          systemPrompt,
+          prompt: imageBase64
+            ? "Please OCR this image screenshot/page and analyze its educational content for a Hong Kong DSE secondary student. If any non-English text is read, automatically convert/translate it into fluent English for ocrText and speechScript."
+            : `Analyze this text snippet for a Hong Kong DSE secondary student (convert any non-English text to fluent English for ocrText):\n\n${text}`,
+          imageBase64,
+          jsonOutput: true,
+        });
+
+        const data = parseCleanJson(groqResult.content);
+        providerStats.groqCount++;
+        providerStats.lastUsedProvider["ocr_provider"] = `groq (${groqResult.modelUsed})`;
+        return res.json({ ...data, _providerUsed: `groq (${groqResult.modelUsed})` });
+      } catch (groqErr: any) {
+        providerStats.groqErrors++;
+        console.warn(`[Groq OCR] Groq call failed (${groqErr.message}). Falling back to Gemini OCR...`);
+      }
+    }
+
     if (imageBase64) {
       // Vision Multimodal OCR uses Gemini
       const ai = getGeminiClient();
@@ -703,7 +858,7 @@ Return your response STRICTLY as a JSON object matching this schema:
       const parts: any[] = [
         { text: systemPrompt },
         { inlineData: { mimeType: "image/jpeg", data: cleanBase64 } },
-        { text: "Please OCR this image and analyze its educational content for a Hong Kong DSE secondary student." }
+        { text: "Please OCR this image and analyze its educational content for a Hong Kong DSE secondary student. If any non-English text is read, automatically convert/translate it into fluent English for ocrText and speechScript." }
       ];
 
       try {
@@ -712,7 +867,9 @@ Return your response STRICTLY as a JSON object matching this schema:
           config: { responseMimeType: "application/json" }
         });
         const data = parseCleanJson(response.text || "{}");
-        return res.json(data);
+        providerStats.geminiCount++;
+        providerStats.lastUsedProvider["ocr_provider"] = "gemini (gemini-3.6-flash)";
+        return res.json({ ...data, _providerUsed: "gemini (gemini-3.6-flash)" });
       } catch (err: any) {
         console.warn("Vision OCR Gemini call failed, returning fallback:", err.message);
       }

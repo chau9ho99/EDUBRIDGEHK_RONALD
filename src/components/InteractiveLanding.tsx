@@ -14,6 +14,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { Language, translations } from "../utils/i18n";
+import { RandomPromoCard } from "./RandomPromoCard";
 import { speakText, stopSpeech } from "../utils/speechUtils";
 
 interface InteractiveLandingProps {
@@ -21,6 +22,7 @@ interface InteractiveLandingProps {
   onQuickStart: () => void;
   onGenerateNewArticle: () => void;
   isGeneratingArticle: boolean;
+  onOpenPromoModal?: () => void;
 }
 
 export const InteractiveLanding: React.FC<InteractiveLandingProps> = ({
@@ -28,6 +30,7 @@ export const InteractiveLanding: React.FC<InteractiveLandingProps> = ({
   onQuickStart,
   onGenerateNewArticle,
   isGeneratingArticle,
+  onOpenPromoModal,
 }) => {
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<"snap" | "speech" | "oral" | "vocab">("snap");
@@ -376,6 +379,42 @@ export const InteractiveLanding: React.FC<InteractiveLandingProps> = ({
           </div>
         </div>
       </div>
+
+      {/* DSE Promo Posters Showcase Banner with Random Poster Widget */}
+      {onOpenPromoModal && (
+        <div className="mt-6 bg-gradient-to-r from-purple-900/40 via-pink-900/30 to-blue-900/40 border border-purple-500/40 rounded-3xl p-5 sm:p-6 text-white relative overflow-hidden shadow-2xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2 text-center md:text-left">
+              <span className="inline-block px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                🔥 小紅書 & 學生熱推宣傳海報
+              </span>
+              <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                「從不適應，到 DSE 奪星」7大核心海報 Showcase
+              </h3>
+              <p className="text-xs text-white/70 max-w-xl leading-relaxed">
+                專為新來港中學生打造的 7 個 AI 英語學習海報：Snap & Learn 隨手拍、AI 口語診斷、30 年經驗 DSE Oral 小組試、個人知識庫與間隔重複記憶卡。
+              </p>
+
+              <button
+                onClick={onOpenPromoModal}
+                className="mt-2 px-5 py-3 bg-gradient-to-r from-[#00FF88] to-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-xl hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-black" />
+                <span>{lang === "en" ? "View All 7 Posters Gallery" : "查看全部 7 張海報畫廊 🌟"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="shrink-0 w-full md:w-auto">
+              <RandomPromoCard
+                lang={lang}
+                onOpenFullShowcase={onOpenPromoModal}
+                compactMode={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

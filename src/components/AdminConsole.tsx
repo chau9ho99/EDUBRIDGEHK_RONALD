@@ -28,18 +28,23 @@ interface ProviderStatusData {
     tutor_chat: "openrouter" | "gemini";
     group_discussion: "openrouter" | "gemini";
     translation: "openrouter" | "gemini";
+    ocr_provider: "groq" | "gemini";
   };
   stats: {
     todayDate: string;
     openrouterCount: number;
     openrouterLimit: number; // 50
     geminiCount: number;
+    groqCount?: number;
     openrouterErrors: number;
+    groqErrors?: number;
     lastUsedProvider: { [key: string]: string };
   };
   openrouterKeyConfigured: boolean;
   geminiKeyConfigured: boolean;
+  groqKeyConfigured?: boolean;
   openrouterModel: string;
+  groqModel?: string;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
@@ -65,6 +70,15 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
     sampleOutput?: string;
   } | null>(null);
 
+  const [testingGroq, setTestingGroq] = useState<boolean>(false);
+  const [groqTestResult, setGroqTestResult] = useState<{
+    success: boolean;
+    message: string;
+    responseTimeMs?: number;
+    sampleOutput?: string;
+    modelUsed?: string;
+  } | null>(null);
+
   const fetchStatus = async () => {
     setLoading(true);
     try {
@@ -84,7 +98,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
     fetchStatus();
   }, []);
 
-  const handleSetProvider = async (feature: string, provider: "openrouter" | "gemini") => {
+  const handleSetProvider = async (feature: string, provider: "openrouter" | "gemini" | "groq") => {
     try {
       const res = await fetch("/api/admin/set-provider", {
         method: "POST",
@@ -99,13 +113,16 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
     }
   };
 
-  const handleTestProvider = async (provider: "openrouter" | "gemini") => {
+  const handleTestProvider = async (provider: "openrouter" | "gemini" | "groq") => {
     if (provider === "openrouter") {
       setTestingOpenRouter(true);
       setOpenRouterTestResult(null);
-    } else {
+    } else if (provider === "gemini") {
       setTestingGemini(true);
       setGeminiTestResult(null);
+    } else {
+      setTestingGroq(true);
+      setGroqTestResult(null);
     }
 
     try {
@@ -118,17 +135,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
 
       if (provider === "openrouter") {
         setOpenRouterTestResult(json);
-      } else {
+      } else if (provider === "gemini") {
         setGeminiTestResult(json);
+      } else {
+        setGroqTestResult(json);
       }
       fetchStatus();
     } catch (err: any) {
       const failObj = { success: false, message: err.message || "Test call failed" };
       if (provider === "openrouter") setOpenRouterTestResult(failObj);
-      else setGeminiTestResult(failObj);
+      else if (provider === "gemini") setGeminiTestResult(failObj);
+      else setGroqTestResult(failObj);
     } finally {
       if (provider === "openrouter") setTestingOpenRouter(false);
-      else setTestingGemini(false);
+      else if (provider === "gemini") setTestingGemini(false);
+      else setTestingGroq(false);
     }
   };
 
@@ -315,6 +336,47 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
               <div className="pt-3 border-t border-white/10 flex justify-between items-center text-xs font-black">
                 <span className="text-white/80">Requests Handled Today:</span>
                 <span className="text-blue-400 font-bold text-sm">{data.stats.geminiCount}</span>
+              </div>
+            </div>
+
+            {/* Card 3: Groq High-Speed Vision/OCR Status */}
+            <div className="bg-gradient-to-br from-neutral-900 via-black to-neutral-900 border-2 border-amber-500/50 rounded-3xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-black font-black flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-black" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-base text-white">Groq Vision OCR</h3>
+                    <p className="text-[10px] text-amber-300 font-mono font-bold">Ultra-Low Latency Node</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[10px] font-black uppercase">
+                  DEFAULT OCR
+                </span>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-white/70">Vision Model:</span>
+                  <span className="text-amber-300 font-mono text-[11px]">qwen/qwen3.6-27b</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-white/70">Engine Target:</span>
+                  <span className="text-white font-mono text-[11px]">Snap OCR & Textbook</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-white/70">API Key Status:</span>
+                  <span className={data.groqKeyConfigured ? "text-amber-300 flex items-center gap-1" : "text-amber-500/70"}>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {data.groqKeyConfigured ? "Configured" : "Missing GROQ_API_KEY"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-between items-center text-xs font-black">
+                <span className="text-white/80">OCR Requests Today:</span>
+                <span className="text-amber-400 font-bold text-sm">{data.stats.groqCount || 0}</span>
               </div>
             </div>
 
@@ -569,6 +631,48 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Feature 6: OCR Provider (Groq / Gemini) */}
+              <div className="bg-black/80 border border-amber-500/30 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">
+                      ocr_provider
+                    </span>
+                    <span className="text-[10px] text-amber-300/60 font-bold">Ultra-Fast Node</span>
+                  </div>
+                  <h4 className="font-black text-sm text-white mt-1">📸 Snap OCR & Vision Node</h4>
+                  <p className="text-[11px] text-white/60 font-sans mt-1 leading-normal">
+                    High-speed textbook photo recognition & DSE analysis.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                  <div className="text-[10px] text-white/50 font-bold">Active Route:</div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleSetProvider("ocr_provider", "groq")}
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-black uppercase transition-all ${
+                        data.providers.ocr_provider === "groq" || !data.providers.ocr_provider
+                          ? "bg-amber-400 text-black shadow-md"
+                          : "bg-white/5 text-white/60 border border-white/10 hover:text-white"
+                      }`}
+                    >
+                      Groq (Qwen)
+                    </button>
+                    <button
+                      onClick={() => handleSetProvider("ocr_provider", "gemini")}
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-black uppercase transition-all ${
+                        data.providers.ocr_provider === "gemini"
+                          ? "bg-blue-500 text-white shadow-md"
+                          : "bg-white/5 text-white/60 border border-white/10 hover:text-white"
+                      }`}
+                    >
+                      Gemini
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -588,7 +692,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Test Box 1: OpenRouter Test */}
               <div className="bg-black/90 border border-white/15 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
@@ -705,6 +809,67 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ lang }) => {
                     {geminiTestResult.sampleOutput && (
                       <div className="bg-black/70 p-2.5 rounded-lg border border-white/10 text-[10px] text-white/80 overflow-x-auto max-h-32 leading-relaxed">
                         {geminiTestResult.sampleOutput}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Test Box 3: Groq Test */}
+              <div className="bg-black/90 border border-amber-500/30 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-400" />
+                    <h3 className="font-black text-sm text-white">Test Groq Vision OCR</h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-300">
+                    qwen/qwen3.6-27b
+                  </span>
+                </div>
+
+                <p className="text-xs text-white/60 font-sans">
+                  Tests Groq multimodal vision API connectivity for ultra-fast OCR text analysis.
+                </p>
+
+                <button
+                  onClick={() => handleTestProvider("groq")}
+                  disabled={testingGroq}
+                  className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${testingGroq ? "animate-spin" : ""}`} />
+                  <span>{testingGroq ? "Testing Groq..." : "Run Groq OCR Test"}</span>
+                </button>
+
+                {groqTestResult && (
+                  <div
+                    className={`rounded-xl p-4 border space-y-2 text-xs font-mono ${
+                      groqTestResult.success
+                        ? "bg-amber-950/40 border-amber-500/50 text-amber-200"
+                        : "bg-red-950/40 border-red-500/50 text-red-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-1.5">
+                        {groqTestResult.success ? (
+                          <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-red-400" />
+                        )}
+                        {groqTestResult.success ? "Connection Success" : "Test Failed"}
+                      </span>
+                      {groqTestResult.responseTimeMs && (
+                        <span className="text-white/60 text-[10px] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          {groqTestResult.responseTimeMs} ms
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] opacity-90 leading-relaxed font-sans">
+                      {groqTestResult.message}
+                    </p>
+                    {groqTestResult.sampleOutput && (
+                      <div className="bg-black/70 p-2.5 rounded-lg border border-white/10 text-[10px] text-white/80 overflow-x-auto max-h-32 leading-relaxed">
+                        {groqTestResult.sampleOutput}
                       </div>
                     )}
                   </div>

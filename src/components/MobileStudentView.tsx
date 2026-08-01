@@ -49,6 +49,7 @@ interface MobileStudentViewProps {
   lang: Language;
   studentProfile?: StudentProfile | null;
   onOpenProfileModal?: () => void;
+  onOpenPromoModal?: () => void;
 }
 
 type MobileTab = "snap" | "audio" | "oral" | "flashcards" | "database";
@@ -127,6 +128,7 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
   lang,
   studentProfile,
   onOpenProfileModal,
+  onOpenPromoModal,
 }) => {
   const t = translations[lang];
 
@@ -547,25 +549,35 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
         </div>
 
         {/* Student Profile Quick Banner */}
-        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
+        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs gap-2">
           <div className="flex items-center gap-2 truncate">
             <Award className="w-4 h-4 text-yellow-300 shrink-0" />
             {studentProfile ? (
               <span className="font-bold text-white truncate">
-                {studentProfile.name} • {studentProfile.schoolType === "primary" ? L("小學") : L("中學")}({studentProfile.grade}) • {studentProfile.age}{L("歲")}
+                {studentProfile.name} • {studentProfile.schoolType === "primary" ? L("小學") : L("中學")}({studentProfile.grade})
               </span>
             ) : (
-              <span className="text-white/70 italic">{L("👤 未設定學生檔案 (點擊設定)")}</span>
+              <span className="text-white/70 italic truncate">{L("👤 未設定學生檔案")}</span>
             )}
           </div>
-          {onOpenProfileModal && (
-            <button
-              onClick={onOpenProfileModal}
-              className="px-2.5 py-1 bg-[#00FF88] text-black font-black rounded-lg text-[11px] uppercase tracking-wider shrink-0 active:scale-95 transition-all"
-            >
-              {studentProfile ? L("修改檔案") : L("設定檔案")}
-            </button>
-          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onOpenPromoModal && (
+              <button
+                onClick={onOpenPromoModal}
+                className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black rounded-lg text-[10px] uppercase tracking-wider shrink-0 active:scale-95 transition-all border border-purple-400"
+              >
+                {L("🌟 海報展")}
+              </button>
+            )}
+            {onOpenProfileModal && (
+              <button
+                onClick={onOpenProfileModal}
+                className="px-2 py-1 bg-[#00FF88] text-black font-black rounded-lg text-[10px] uppercase tracking-wider shrink-0 active:scale-95 transition-all"
+              >
+                {studentProfile ? L("修改") : L("設定")}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -597,49 +609,81 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
             </div>
 
             {/* Giant One-Tap Camera Trigger Button */}
-            <div className="bg-gradient-to-br from-black via-[#0a0a0a] to-emerald-950/40 border-2 border-[#00FF88]/40 rounded-3xl p-5 text-center shadow-[0_0_30px_rgba(0,255,136,0.15)] relative overflow-hidden">
-              <div className="absolute top-2 right-3 text-[10px] font-black uppercase tracking-widest text-[#00FF88] bg-[#00FF88]/10 border border-[#00FF88]/30 px-2 py-0.5 rounded-full">
-                Gemini OCR
+            <div className={`bg-gradient-to-br from-black via-[#0a0a0a] to-emerald-950/40 border-2 ${
+              isAnalyzingImage
+                ? "border-[#00FF88] animate-ocr-glow shadow-[0_0_35px_rgba(0,255,136,0.3)]"
+                : "border-[#00FF88]/40 shadow-[0_0_30px_rgba(0,255,136,0.15)]"
+            } rounded-3xl p-5 text-center relative overflow-hidden transition-all`}>
+              <div className="absolute top-2 right-3 text-[10px] font-black uppercase tracking-widest text-[#00FF88] bg-[#00FF88]/10 border border-[#00FF88]/30 px-2 py-0.5 rounded-full z-10">
+                AI 智能 OCR
               </div>
 
-              <div
-                onClick={handleTriggerCamera}
-                className="w-16 h-16 rounded-2xl bg-[#00FF88] text-black mx-auto flex items-center justify-center shadow-lg shadow-[#00FF88]/30 mb-3 active:scale-90 transition-transform cursor-pointer"
-              >
-                {isAnalyzingImage ? (
-                  <RefreshCw className="w-8 h-8 animate-spin" />
-                ) : (
-                  <Camera className="w-9 h-9" />
-                )}
-              </div>
+              {isAnalyzingImage ? (
+                /* Scanning HUD Animation Box */
+                <div className="my-2 py-6 px-4 rounded-2xl bg-black/90 border-2 border-[#00FF88]/60 relative overflow-hidden shadow-2xl space-y-3">
+                  <div className="absolute inset-0 bg-emerald-500/10 bg-[radial-gradient(#00FF88_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
+                  
+                  {/* Moving Laser Scan Line */}
+                  <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00FF88] to-transparent shadow-[0_0_20px_#00FF88] animate-ocr-laser pointer-events-none" />
+                  
+                  {/* HUD Corner Target Brackets */}
+                  <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
 
-              <h2 className="text-lg font-black text-white uppercase tracking-tight">
-                {isAnalyzingImage ? L("📷 相片 OCR 正在解析中...") : L("拍下課本 / 試卷一鍵解析")}
-              </h2>
-              <p className="text-xs text-white/60 mt-1 mb-4">
-                {L("拍攝或上載課本試卷相片 • 自動萃取 DSE 5** 考題生詞")}
-              </p>
+                  <div className="w-12 h-12 rounded-full bg-[#00FF88]/20 border border-[#00FF88] text-[#00FF88] mx-auto flex items-center justify-center animate-spin">
+                    <RefreshCw className="w-6 h-6" />
+                  </div>
 
-              {/* Grid with Camera & Photo Library Triggers */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleTriggerCamera}
-                  disabled={isAnalyzingImage}
-                  className="py-3.5 bg-[#00FF88] text-black font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 shadow-xl shadow-[#00FF88]/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>{L("📷 開啟相機拍攝")}</span>
-                </button>
+                  <div className="relative z-10 space-y-1">
+                    <h3 className="text-sm font-black text-[#00FF88] uppercase tracking-wider animate-pulse flex items-center justify-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-[#00FF88]" />
+                      <span>{L("📸 AI 廣角激光掃描解析中...")}</span>
+                    </h3>
+                    <p className="text-[11px] text-white/70">
+                      {L("正在分析課本相片 • 萃取 DSE 5** 高頻核心詞彙")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    onClick={handleTriggerCamera}
+                    className="w-16 h-16 rounded-2xl bg-[#00FF88] text-black mx-auto flex items-center justify-center shadow-lg shadow-[#00FF88]/30 mb-3 active:scale-90 transition-transform cursor-pointer"
+                  >
+                    <Camera className="w-9 h-9" />
+                  </div>
 
-                <button
-                  onClick={handleTriggerPhotoLibrary}
-                  disabled={isAnalyzingImage}
-                  className="py-3.5 bg-white/10 hover:bg-white/20 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 border border-white/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  <Upload className="w-4 h-4 text-[#00FF88]" />
-                  <span>{L("🖼️ 上載相冊相片")}</span>
-                </button>
-              </div>
+                  <h2 className="text-lg font-black text-white uppercase tracking-tight">
+                    {L("拍下課本 / 試卷一鍵解析")}
+                  </h2>
+                  <p className="text-xs text-white/60 mt-1 mb-4">
+                    {L("拍攝或上載課本試卷相片 • 自動萃取 DSE 5** 考題生詞")}
+                  </p>
+
+                  {/* Grid with Camera & Photo Library Triggers */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleTriggerCamera}
+                      disabled={isAnalyzingImage}
+                      className="py-3.5 bg-[#00FF88] text-black font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 shadow-xl shadow-[#00FF88]/20 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{L("📷 開啟相機拍攝")}</span>
+                    </button>
+
+                    <button
+                      onClick={handleTriggerPhotoLibrary}
+                      disabled={isAnalyzingImage}
+                      className="py-3.5 bg-white/10 hover:bg-white/20 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 border border-white/20 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <Upload className="w-4 h-4 text-[#00FF88]" />
+                      <span>{L("🖼️ 上載相冊相片")}</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Active Snap Document Card with Karaoke Highlighting */}

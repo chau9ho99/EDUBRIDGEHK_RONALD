@@ -821,6 +821,23 @@ export const SnapAndLearn: React.FC<SnapAndLearnProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Hidden File & Camera Inputs for Global Triggering */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageChange}
+        accept="image/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        onChange={handleImageChange}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+      />
+
       {/* Interactive Onboarding Landing Banner (Collapsible Container) */}
       <div className="bg-[#080808] border border-white/10 rounded-2xl overflow-hidden shadow-2xl transition-all">
         <div className="flex items-center justify-between px-5 py-3.5 bg-white/5 border-b border-white/10">
@@ -1044,23 +1061,50 @@ export const SnapAndLearn: React.FC<SnapAndLearnProps> = ({
 
             {/* Selected Image Preview & Scan Action inside Modal */}
             {selectedImage && (
-              <div className="bg-black border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-4">
-                <img
-                  src={selectedImage}
-                  alt="Scanned photo"
-                  className="max-h-64 rounded-xl object-contain border border-white/20 shadow-xl"
-                />
+              <div className={`bg-black border-2 ${
+                isAnalyzing ? "border-[#00FF88] animate-ocr-glow shadow-[0_0_35px_rgba(0,255,136,0.3)]" : "border-white/20 hover:border-[#00FF88]"
+              } rounded-2xl p-4 sm:p-5 flex flex-col items-center gap-4 relative overflow-hidden transition-all`}>
+                
+                <div className="relative inline-block max-h-64 sm:max-h-80 mx-auto rounded-xl overflow-hidden border-2 border-[#00FF88]/40 shadow-2xl">
+                  <img
+                    src={selectedImage}
+                    alt="Scanned photo"
+                    className="max-h-64 sm:max-h-80 mx-auto rounded-xl object-contain block"
+                  />
+                  
+                  {/* High-Tech OCR Laser Scan Beam & HUD Brackets */}
+                  <div className="absolute inset-0 bg-emerald-500/10 bg-[radial-gradient(#00FF88_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
+                  
+                  {/* Moving Laser Line */}
+                  <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00FF88] to-transparent shadow-[0_0_20px_#00FF88] animate-ocr-laser pointer-events-none" />
+                  
+                  {/* HUD Targeting Brackets */}
+                  <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                  <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+
+                  {isAnalyzing && (
+                    <div className="absolute inset-x-0 bottom-4 flex justify-center z-10">
+                      <span className="bg-black/90 text-[#00FF88] border border-[#00FF88] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-pulse">
+                        <Sparkles className="w-4 h-4 text-[#00FF88] animate-spin" />
+                        <span>📸 AI 廣角激光掃描解析中...</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={async () => {
                     await runAnalysis();
                   }}
                   disabled={isAnalyzing}
-                  className="w-full py-3.5 bg-[#00FF88] text-black font-black uppercase tracking-wider text-sm rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.4)] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#00FF88] hover:bg-[#00e67a] text-black font-black uppercase tracking-wider text-sm rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.4)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 >
                   {isAnalyzing ? (
                     <>
                       <RefreshCw className="w-5 h-5 animate-spin text-black" />
-                      <span>{t.analyzing}</span>
+                      <span>{t.ocrAnalyzing}</span>
                     </>
                   ) : (
                     <>
@@ -1461,14 +1505,14 @@ export const SnapAndLearn: React.FC<SnapAndLearnProps> = ({
               <Zap className="w-4 h-4 text-[#00FF88] animate-spin" />
               <span>
                 {isGeneratingArticle
-                  ? "⚡ OpenRouter AI Status: 正在使用 OpenRouter 引擎 (nemotron-3-ultra-550b) 生成全新 DSE 文章/課文..."
+                  ? "⚡ AI 正在為你生成全新 DSE 英文精選文章與重點詞彙..."
                   : isGeneratingVocab
-                  ? "⚡ OpenRouter AI Status: 正在生成更多 DSE Level 5* 高頻生詞，自動去重並置頂顯示..."
-                  : "⚡ OpenRouter AI Status: 正在進行多模態 OCR 提取與 DSE 語法分層解析..."}
+                  ? "⚡ AI 正在為你分析課文並提取更多 DSE Level 5* 高頻生詞..."
+                  : "⚡ AI 正在進行多模態 OCR 圖像識圖與 DSE 語法分層解析..."}
               </span>
             </div>
             <span className="text-[10px] bg-[#00FF88] text-black font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              OpenRouter Working
+              AI 智能引擎運作中
             </span>
           </div>
         )}
@@ -1645,24 +1689,44 @@ export const SnapAndLearn: React.FC<SnapAndLearnProps> = ({
 
         {inputMode === "upload" && (
           <div className="space-y-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageChange}
-              accept="image/*"
-              className="hidden"
-            />
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-white/20 hover:border-[#00FF88] rounded-2xl p-6 sm:p-8 text-center bg-black cursor-pointer transition-all space-y-3"
+              className={`border-2 border-dashed ${
+                isAnalyzing
+                  ? "border-[#00FF88] bg-black animate-ocr-glow shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+                  : "border-white/20 hover:border-[#00FF88] bg-black"
+              } rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all space-y-3 relative overflow-hidden`}
             >
               {selectedImage ? (
-                <div className="space-y-3">
-                  <img
-                    src={selectedImage}
-                    alt="Selected"
-                    className="max-h-48 mx-auto rounded-xl border border-white/20 shadow-md"
-                  />
+                <div className="space-y-3 relative">
+                  <div className="relative inline-block max-h-64 mx-auto rounded-xl overflow-hidden border-2 border-[#00FF88]/40 shadow-2xl">
+                    <img
+                      src={selectedImage}
+                      alt="Selected"
+                      className="max-h-64 mx-auto rounded-xl object-contain block"
+                    />
+                    
+                    {/* High-Tech OCR Laser Scan Beam & HUD Brackets */}
+                    <div className="absolute inset-0 bg-emerald-500/10 bg-[radial-gradient(#00FF88_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
+                    
+                    {/* Moving Laser Line */}
+                    <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00FF88] to-transparent shadow-[0_0_18px_#00FF88] animate-ocr-laser pointer-events-none" />
+                    
+                    {/* HUD Targeting Brackets */}
+                    <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                    <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                    <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+                    <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-[#00FF88] shadow-[0_0_8px_#00FF88]" />
+
+                    {isAnalyzing && (
+                      <div className="absolute inset-x-0 bottom-4 flex justify-center z-10">
+                        <span className="bg-black/90 text-[#00FF88] border border-[#00FF88] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-pulse">
+                          <Sparkles className="w-4 h-4 text-[#00FF88] animate-spin" />
+                          <span>📸 AI 智能 OCR 廣角掃描解析中...</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-[#00FF88] font-black uppercase tracking-wider">{t.reselectPhoto}</p>
                 </div>
               ) : (
@@ -2083,7 +2147,7 @@ export const SnapAndLearn: React.FC<SnapAndLearnProps> = ({
                   </h4>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00FF88]/10 text-[#00FF88] border border-[#00FF88]/30 flex items-center gap-1">
                     <Zap className="w-3 h-3 text-[#00FF88]" />
-                    <span>{activeItem.providerUsed || "OpenRouter AI (openrouter/free)"}</span>
+                    <span>{investorMode ? (activeItem.providerUsed || "AI 智能分析引擎") : "AI 多模態分析引擎"}</span>
                   </span>
                 </div>
 

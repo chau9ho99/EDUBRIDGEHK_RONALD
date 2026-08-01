@@ -5,7 +5,6 @@ import {
   Brain,
   Sparkles,
   Award,
-  BarChart3,
   Globe,
   GraduationCap,
   LayoutGrid,
@@ -18,32 +17,29 @@ import { Language, translations } from "../utils/i18n";
 import { StudentProfile } from "../types";
 
 interface NavbarProps {
-  activeTab: "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
-  setActiveTab: (tab: "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin") => void;
-  investorMode: boolean;
-  setInvestorMode: (val: boolean) => void;
+  activeTab: "welcome" | "home" | "snap" | "discussion" | "knowledge" | "admin";
+  setActiveTab: (tab: "welcome" | "home" | "snap" | "discussion" | "knowledge" | "admin") => void;
   isMobileMode?: boolean;
   setIsMobileMode?: (val: boolean) => void;
   lang: Language;
   setLang: (lang: Language) => void;
   studentProfile?: StudentProfile | null;
   onOpenProfileModal?: () => void;
+  onOpenPromoModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  investorMode,
-  setInvestorMode,
   isMobileMode = false,
   setIsMobileMode,
   lang,
   setLang,
   studentProfile,
   onOpenProfileModal,
+  onOpenPromoModal,
 }) => {
   const t = translations[lang];
-
 
   return (
     <header className="sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-md border-b border-white/10 text-white shadow-2xl">
@@ -128,40 +124,45 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>
                 {studentProfile
                   ? `👤 ${studentProfile.name} (${studentProfile.grade})`
-                  : "👤 設定學生檔案"}
+                  : lang === "en"
+                  ? "👤 Student Profile"
+                  : lang === "zh-CN"
+                  ? "👤 学生档案"
+                  : "👤 學生檔案"}
               </span>
             </button>
           )}
 
-          {/* Investor Pitch Toggle */}
-          <button
-            onClick={() => setInvestorMode(!investorMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-              investorMode
-                ? "bg-[#00FF88] text-black shadow-[0_0_15px_rgba(0,255,136,0.3)]"
-                : "bg-white/10 text-white/70 border border-white/20 hover:text-white"
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">{investorMode ? t.investorModeOn : t.investorModeOff}</span>
-            <span className="sm:hidden">{investorMode ? "投資 ON" : "投資 OFF"}</span>
-          </button>
+          {/* Promo Showcase Modal Trigger */}
+          {onOpenPromoModal && (
+            <button
+              onClick={onOpenPromoModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-purple-600 to-pink-600 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:scale-105 active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span>{lang === "en" ? "🌟 DSE Cards" : lang === "zh-CN" ? "🌟 DSE 备考卡片" : "🌟 DSE 奪星卡片"}</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("home")}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00FF88] to-blue-500 border-2 border-white/20 p-0.5 shadow-lg flex items-center justify-center">
+          {/* Brand Logo - Links to Landing Page */}
+          <div
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => setActiveTab("welcome")}
+            title={lang === "en" ? "Return to Landing Page" : "返回首頁"}
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00FF88] to-blue-500 border-2 border-white/20 p-0.5 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform">
               <div className="w-full h-full bg-black rounded-[9px] flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-[#00FF88]" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-2xl tracking-tighter uppercase text-white">
+                <span className="font-black text-2xl tracking-tighter uppercase text-white group-hover:text-[#00FF88] transition-colors">
                   EduBridge<span className="text-[#00FF88]">HK</span>
                 </span>
                 <span className="text-[10px] uppercase tracking-widest text-white/40 border border-white/20 px-2 py-0.5 rounded font-bold">
@@ -175,17 +176,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-2 bg-[#000000] p-1.5 rounded-xl border border-white/10">
+          <nav className="hidden md:flex items-center gap-1.5 bg-[#000000] p-1.5 rounded-xl border border-white/10">
             <button
               onClick={() => setActiveTab("home")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
                 activeTab === "home"
                   ? "bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.25)]"
                   : "text-white/60 hover:text-white hover:bg-white/5"
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
-              {t.tabHome || "🏠 主頁選單"}
+              <span>{lang === "en" ? "App Hub" : lang === "zh-CN" ? "🏠 功能总览" : "🏠 功能總覽"}</span>
             </button>
 
             <button
@@ -210,8 +211,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Users className="w-4 h-4" />
               {t.tabDiscussion}
-              <span className="absolute -top-1 -right-1 bg-white text-black text-[9px] font-black px-1.5 py-0.2 rounded uppercase animate-pulse">
-                Phase 2
+              <span className="absolute -top-1 -right-1 bg-white text-black text-[9px] font-black px-1.5 py-0.2 rounded uppercase">
+                AI Oral
               </span>
             </button>
 
@@ -228,18 +229,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab("investor")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                activeTab === "investor"
-                  ? "bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.25)]"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              {t.tabInvestor}
-            </button>
-
-            <button
               onClick={() => setActiveTab("admin")}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
                 activeTab === "admin"
@@ -252,31 +241,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Quick Stats / Subscription Badge */}
+          {/* Language / Support Tag */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab("investor")}
-              className="border border-white/20 bg-white/5 text-[#00FF88] hover:border-[#00FF88] px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all"
-            >
+            <div className="border border-white/20 bg-white/5 text-[#00FF88] px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-[#00FF88]" />
-              <span className="hidden sm:inline">三語適應:</span> 英 / 粵 / 普
-            </button>
+              <span className="hidden sm:inline">
+                {lang === "en" ? "Trilingual:" : lang === "zh-CN" ? "三语适应:" : "三語適應:"}
+              </span>{" "}
+              英 / 粵 / 普
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Navigation Bar - Large, High-Contrast Touchable Buttons */}
-      <div className="md:hidden flex border-t border-white/15 bg-black/95 backdrop-blur-lg px-2 py-2 justify-around gap-1">
+      {/* Mobile Navigation Bar */}
+      <div className="md:hidden flex border-t border-white/15 bg-black/95 backdrop-blur-lg px-2 py-2 justify-around gap-1 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab("home")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+          className={`flex-1 min-w-[60px] flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
             activeTab === "home"
               ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
               : "text-white/70 hover:text-white bg-white/5 border border-white/10"
           }`}
         >
-          <LayoutGrid className="w-6 h-6 mb-1" />
-          <span>{lang === "en" ? "Home" : lang === "zh-CN" ? "主页" : "主頁"}</span>
+          <LayoutGrid className="w-5 h-5 mb-1" />
+          <span>{lang === "en" ? "Hub" : lang === "zh-CN" ? "总览" : "總覽"}</span>
         </button>
 
         <button
@@ -287,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               : "text-white/70 hover:text-white bg-white/5 border border-white/10"
           }`}
         >
-          <Camera className="w-6 h-6 mb-1" />
+          <Camera className="w-5 h-5 mb-1" />
           <span>{lang === "en" ? "Snap" : lang === "zh-CN" ? "即影即学" : "即影即學"}</span>
         </button>
 
@@ -299,8 +288,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               : "text-white/70 hover:text-white bg-white/5 border border-white/10"
           }`}
         >
-          <Users className="w-6 h-6 mb-1" />
-          <span>{lang === "en" ? "Speaking" : lang === "zh-CN" ? "AI 口试" : "AI 口試"}</span>
+          <Users className="w-5 h-5 mb-1" />
+          <span>{lang === "en" ? "Oral" : lang === "zh-CN" ? "AI 口试" : "AI 口試"}</span>
         </button>
 
         <button
@@ -311,20 +300,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               : "text-white/70 hover:text-white bg-white/5 border border-white/10"
           }`}
         >
-          <Brain className="w-6 h-6 mb-1" />
+          <Brain className="w-5 h-5 mb-1" />
           <span>{lang === "en" ? "Cards" : lang === "zh-CN" ? "知识库" : "知識庫"}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("investor")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "investor"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <Sparkles className="w-6 h-6 mb-1" />
-          <span>{lang === "en" ? "Business" : lang === "zh-CN" ? "商业" : "商業"}</span>
         </button>
 
         <button
@@ -335,10 +312,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               : "text-white/70 hover:text-white bg-white/5 border border-white/10"
           }`}
         >
-          <Shield className="w-6 h-6 mb-1" />
+          <Shield className="w-5 h-5 mb-1" />
           <span>{lang === "en" ? "Admin" : lang === "zh-CN" ? "后台" : "後台"}</span>
         </button>
       </div>
     </header>
   );
 };
+

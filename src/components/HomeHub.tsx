@@ -9,17 +9,20 @@ import {
   Zap
 } from "lucide-react";
 import { Language, translations } from "../utils/i18n";
+import { RandomPromoCard } from "./RandomPromoCard";
 
 interface HomeHubProps {
   lang: Language;
   onSelectFeature: (feature: "snap" | "discussion" | "knowledge" | "investor") => void;
   investorMode: boolean;
+  onOpenPromoModal?: () => void;
 }
 
 export const HomeHub: React.FC<HomeHubProps> = ({
   lang,
   onSelectFeature,
   investorMode,
+  onOpenPromoModal,
 }) => {
   const t = translations[lang];
 
@@ -395,6 +398,44 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Promo Poster Showcase Section */}
+      <div className="bg-gradient-to-r from-purple-900/40 via-pink-900/30 to-blue-900/40 border-2 border-purple-400/50 rounded-3xl p-6 shadow-2xl space-y-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <span className="inline-block px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-black rounded-full uppercase tracking-wider">
+              🔥 小紅書 & 學生熱推 • 7大高清海報 Showcase
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-white">
+              {lang === "en" ? "🌟 DSE Star-Scoring AI Promo Posters" : "🌟 「從不適應到 DSE 奪星」五大 AI 宣傳海報展"}
+            </h3>
+            <p className="text-xs sm:text-sm text-white/80 max-w-xl leading-relaxed">
+              {lang === "en"
+                ? "Click 'Swap' on the card to randomly explore real 1008x1792 HD posters for Snap & Learn, Pronunciation Diagnostic, DSE Oral & Vocabulary Knowledge Base."
+                : "點擊下方卡片上的「換一張」隨機瀏覽 7 張 1008×1792 高清宣傳海報，包含隨手拍 OCR 釋義、AI 口語診斷、30年經驗 DSE Oral 口試與個人知識庫。"}
+            </p>
+
+            {onOpenPromoModal && (
+              <button
+                onClick={onOpenPromoModal}
+                className="mt-3 px-5 py-3 bg-gradient-to-r from-[#00FF88] to-emerald-400 text-black font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{lang === "en" ? "Browse All 7 Posters Gallery" : "瀏覽全部 7 張宣傳海報畫廊 🎨"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Random Poster Interactive Card */}
+          <div className="shrink-0 w-full md:w-auto">
+            <RandomPromoCard
+              lang={lang}
+              onOpenFullShowcase={onOpenPromoModal}
+              onNavigateToFeature={(feat) => onSelectFeature(feat)}
+            />
           </div>
         </div>
       </div>

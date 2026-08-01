@@ -7,3 +7,36 @@
   }
 }
 
+@keyframes ocrLaserScan {
+  0% {
+    top: 0%;
+    opacity: 0.9;
+  }
+  50% {
+    top: 96%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.9;
+  }
+}
+
+@keyframes ocrPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.4), inset 0 0 15px rgba(0, 255, 136, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(0, 255, 136, 0.8), inset 0 0 30px rgba(0, 255, 136, 0.4);
+  }
+}
+
+.animate-ocr-laser {
+  animation: ocrLaserScan 2s ease-in-out infinite;
+}
+
+.animate-ocr-glow {
+  animation: ocrPulseGlow 2s ease-in-out infinite;
+}
+
+
