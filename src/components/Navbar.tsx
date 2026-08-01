@@ -11,9 +11,11 @@ import {
   LayoutGrid,
   Shield,
   Smartphone,
-  Monitor
+  Monitor,
+  UserCheck
 } from "lucide-react";
 import { Language, translations } from "../utils/i18n";
+import { StudentProfile } from "../types";
 
 interface NavbarProps {
   activeTab: "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
@@ -24,6 +26,8 @@ interface NavbarProps {
   setIsMobileMode?: (val: boolean) => void;
   lang: Language;
   setLang: (lang: Language) => void;
+  studentProfile?: StudentProfile | null;
+  onOpenProfileModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,8 +39,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   setIsMobileMode,
   lang,
   setLang,
+  studentProfile,
+  onOpenProfileModal,
 }) => {
   const t = translations[lang];
+
 
   return (
     <header className="sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-md border-b border-white/10 text-white shadow-2xl">
@@ -110,6 +117,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               EN
             </button>
           </div>
+
+          {/* Student Profile Button */}
+          {onOpenProfileModal && (
+            <button
+              onClick={onOpenProfileModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-105 active:scale-95"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-yellow-300" />
+              <span>
+                {studentProfile
+                  ? `👤 ${studentProfile.name} (${studentProfile.grade})`
+                  : "👤 設定學生檔案"}
+              </span>
+            </button>
+          )}
 
           {/* Investor Pitch Toggle */}
           <button

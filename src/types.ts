@@ -78,3 +78,15 @@ export interface SubscriptionPlan {
   buttonText: string;
   highlighted?: boolean;
 }
+
+export interface StudentProfile {
+  name: string;
+  age: number | string;
+  gender: "male" | "female" | "other";
+  schoolType: "primary" | "secondary";
+  grade: string;
+  email?: string;
+  userId?: string;
+  updatedAt?: number;
+}
+

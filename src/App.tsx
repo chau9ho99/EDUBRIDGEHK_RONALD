@@ -8,7 +8,8 @@ import { InvestorHub } from "./components/InvestorHub";
 import { AdminConsole } from "./components/AdminConsole";
 import { MobileStudentView } from "./components/MobileStudentView";
 import { HighlightReaderPopover } from "./components/HighlightReaderPopover";
-import { SnapItem, VocabWord } from "./types";
+import { StudentProfileModal } from "./components/StudentProfileModal";
+import { SnapItem, VocabWord, StudentProfile } from "./types";
 import { SAMPLE_SNAP_ITEMS } from "./data/presetData";
 import { GraduationCap, ArrowLeft, LayoutGrid, Shield } from "lucide-react";
 import { Language, translations } from "./utils/i18n";
@@ -25,6 +26,38 @@ export default function App() {
   const [investorMode, setInvestorMode] = useState<boolean>(true);
   const [isMobileMode, setIsMobileMode] = useState<boolean>(false);
   const [lang, setLang] = useState<Language>("zh-CN"); // Default to Simplified Chinese per requirement
+
+  // Student Profile State & Onboarding Modal Visibility
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem("edubridge_student_profile");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to parse student profile:", e);
+    }
+    return null;
+  });
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("edubridge_student_profile");
+      return !saved; // If no saved profile, open modal on first launch!
+    } catch (_) {
+      return true;
+    }
+  });
+
+  const handleSaveStudentProfile = (profile: StudentProfile) => {
+    setStudentProfile(profile);
+    try {
+      localStorage.setItem("edubridge_student_profile", JSON.stringify(profile));
+    } catch (e) {
+      console.error("Failed to save student profile:", e);
+    }
+  };
+
 
   const setActiveTab = (tab: TabType) => {
     setActiveTabState(tab);
@@ -174,6 +207,8 @@ export default function App() {
         setIsMobileMode={setIsMobileMode}
         lang={lang}
         setLang={setLang}
+        studentProfile={studentProfile}
+        onOpenProfileModal={() => setIsProfileModalOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -186,6 +221,8 @@ export default function App() {
             onAddVocabToActiveItem={handleSaveHighlightVocab}
             onSwitchToPresentationMode={() => setIsMobileMode(false)}
             lang={lang}
+            studentProfile={studentProfile}
+            onOpenProfileModal={() => setIsProfileModalOpen(true)}
           />
         ) : (
           <>
@@ -304,6 +341,15 @@ export default function App() {
       <HighlightReaderPopover
         lang={lang}
         onAddVocabToActiveItem={handleSaveHighlightVocab}
+      />
+
+      {/* Student Onboarding Profile Modal */}
+      <StudentProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSaveProfile={handleSaveStudentProfile}
+        currentProfile={studentProfile}
+        lang={lang}
       />
     </div>
   );

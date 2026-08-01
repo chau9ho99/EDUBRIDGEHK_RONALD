@@ -35,7 +35,7 @@ import {
   Wand2,
   FolderHeart
 } from "lucide-react";
-import { SnapItem, VocabWord } from "../types";
+import { SnapItem, VocabWord, StudentProfile } from "../types";
 import { Language, translations, toSimplifiedChinese, getVocabMeaning } from "../utils/i18n";
 import { speakText, stopSpeech } from "../utils/speechUtils";
 import { getRandomDSEVocab } from "../data/dseVocabDatabase";
@@ -47,6 +47,8 @@ interface MobileStudentViewProps {
   onAddVocabToActiveItem?: (vocab: VocabWord) => void;
   onSwitchToPresentationMode: () => void;
   lang: Language;
+  studentProfile?: StudentProfile | null;
+  onOpenProfileModal?: () => void;
 }
 
 type MobileTab = "snap" | "audio" | "oral" | "flashcards" | "database";
@@ -123,6 +125,8 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
   onAddVocabToActiveItem,
   onSwitchToPresentationMode,
   lang,
+  studentProfile,
+  onOpenProfileModal,
 }) => {
   const t = translations[lang];
 
@@ -146,9 +150,12 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
   const [karaokeWordIndex, setKaraokeWordIndex] = useState<number>(-1);
   const [speechRate, setSpeechRate] = useState<number>(0.8);
   const karaokeTimerRef = useRef<any>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // AI Passage Generating state
+  // AI Passage Generating & Image Analyzing state
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
 
   // Shadowing Audio Practice state
   const [shadowingIndex, setShadowingIndex] = useState<number>(0);
@@ -347,8 +354,102 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
       onAddSnapItem(newSnap);
       setActiveSnapIndex(0);
       setIsGeneratingAI(false);
-      speakText("AI DSE Article generated successfully!", "en-US", 1.0);
     }, 1200);
+  };
+
+  // Camera & Photo Selection Handlers for Real Image OCR
+  const handleTriggerCamera = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+      cameraInputRef.current.click();
+    }
+  };
+
+  const handleTriggerPhotoLibrary = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAnalyzingImage(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Str = reader.result as string;
+
+      try {
+        const res = await fetch("/api/analyze-snap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: base64Str,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const newSnap: SnapItem = {
+            id: `snap-mobile-${Date.now()}`,
+            timestamp: Date.now(),
+            title: data.title || "課本相片 OCR 解析",
+            subjectCategory: data.subjectCategory || "DSE 課本試卷掃描",
+            ocrText: data.ocrText || "Hong Kong secondary EMI schools place high emphasis on academic English vocabulary and reading comprehension.",
+            imageUrl: base64Str,
+            hkdseContext: data.hkdseContext || "香港考評局 DSE 課文解析與重點提示",
+            translation: data.translation || "香港英文中學十分重視學術英語詞彙及 DSE 閱讀理解。",
+            cantoneseGuide: data.cantoneseGuide,
+            vocabulary: (data.vocabulary && data.vocabulary.length > 0)
+              ? data.vocabulary.map((v: any, idx: number) => ({
+                  id: `v-${Date.now()}-${idx}`,
+                  word: v.word,
+                  ipa: v.ipa || "/.../",
+                  level: v.level || "DSE Level 4",
+                  meanZh: v.meanZh || "",
+                  meanEn: v.meanEn || "",
+                  exampleSentence: v.exampleSentence || "",
+                  masteryLevel: "new" as const,
+                }))
+              : getRandomDSEVocab(3, []),
+            grammarNotes: data.grammarNotes || ["Complex Sentence Structure", "DSE Level 5* Academic Phrasing"],
+            speechScript: data.ocrText || "",
+            knowledgeTags: data.knowledgeTags || ["#DSE_PhotoScan", "#Gemini_OCR"],
+            suggestedQuestions: data.suggestedQuestions || ["如何在此相片範文中運用 5** 生詞？"],
+            chatHistory: [],
+          };
+          onAddSnapItem(newSnap);
+          setActiveSnapIndex(0);
+        } else {
+          throw new Error("OCR API failed");
+        }
+      } catch (err) {
+        console.error("OCR error, using local fallback", err);
+        const fallbackSnap: SnapItem = {
+          id: `snap-mobile-${Date.now()}`,
+          timestamp: Date.now(),
+          title: "課本相片解析 (DSE 生詞萃取)",
+          subjectCategory: "DSE English Photo OCR",
+          ocrText: "Hong Kong secondary school students need to master advanced vocabulary and grammar structures for the HKDSE English Language examination.",
+          imageUrl: base64Str,
+          hkdseContext: "考評局 Level 5** 高頻核心考題",
+          translation: "香港中學生需要掌握進階詞彙及語法結構以應對香港中學文憑試 (HKDSE) 英文科考試。",
+          vocabulary: getRandomDSEVocab(3, []),
+          grammarNotes: ["Complex Sentence Structure", "Passive Voice"],
+          speechScript: "Hong Kong secondary school students need to master advanced vocabulary and grammar structures for the HKDSE English Language examination.",
+          knowledgeTags: ["#DSE_PhotoScan", "#Level5**"],
+          suggestedQuestions: ["這篇相片筆記中有哪些 5** 必背字？"],
+          chatHistory: [],
+        };
+        onAddSnapItem(fallbackSnap);
+        setActiveSnapIndex(0);
+      } finally {
+        setIsAnalyzingImage(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Draw Random Vocab into current SnapItem
@@ -363,7 +464,6 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
     drawn.forEach((w) => {
       if (onAddVocabToActiveItem) onAddVocabToActiveItem(w);
     });
-    speakText(`Added 2 DSE words: ${drawn.map(d=>d.word).join(', ')}`, "en-US", 1.0);
   };
 
   // Switch Flashcard
@@ -408,24 +508,65 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col justify-between pb-24 selection:bg-[#00FF88] selection:text-black">
+      {/* Hidden File Inputs for Mobile Camera Capture & Gallery Selection */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageFileChange}
+        className="hidden"
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageFileChange}
+        className="hidden"
+      />
+
       {/* Top Banner: Mode Indicator & Quick Switch Switcher */}
-      <div className="sticky top-0 z-40 bg-black/95 border-b border-purple-500/30 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#00FF88] animate-ping" />
-          <div className="flex items-center gap-1.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider">
-            <Smartphone className="w-3.5 h-3.5 text-yellow-300" />
-            <span>{L("手機極簡模式")}</span>
+      <div className="sticky top-0 z-40 bg-black/95 border-b border-purple-500/30 backdrop-blur-xl px-4 py-2 flex flex-col gap-2 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#00FF88] animate-ping" />
+            <div className="flex items-center gap-1.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider">
+              <Smartphone className="w-3.5 h-3.5 text-yellow-300" />
+              <span>{L("手機極簡模式")}</span>
+            </div>
           </div>
+
+          <button
+            onClick={onSwitchToPresentationMode}
+            className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-white/20 transition-all active:scale-95"
+            title={L("切換回電腦簡報模式")}
+          >
+            <Monitor className="w-3.5 h-3.5 text-blue-400" />
+            <span>{L("切換簡報 🖥️")}</span>
+          </button>
         </div>
 
-        <button
-          onClick={onSwitchToPresentationMode}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-white/20 transition-all active:scale-95"
-          title={L("切換回電腦簡報模式")}
-        >
-          <Monitor className="w-3.5 h-3.5 text-blue-400" />
-          <span>{L("切換簡報模式 🖥️")}</span>
-        </button>
+        {/* Student Profile Quick Banner */}
+        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 truncate">
+            <Award className="w-4 h-4 text-yellow-300 shrink-0" />
+            {studentProfile ? (
+              <span className="font-bold text-white truncate">
+                {studentProfile.name} • {studentProfile.schoolType === "primary" ? L("小學") : L("中學")}({studentProfile.grade}) • {studentProfile.age}{L("歲")}
+              </span>
+            ) : (
+              <span className="text-white/70 italic">{L("👤 未設定學生檔案 (點擊設定)")}</span>
+            )}
+          </div>
+          {onOpenProfileModal && (
+            <button
+              onClick={onOpenProfileModal}
+              className="px-2.5 py-1 bg-[#00FF88] text-black font-black rounded-lg text-[11px] uppercase tracking-wider shrink-0 active:scale-95 transition-all"
+            >
+              {studentProfile ? L("修改檔案") : L("設定檔案")}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Screen Content Area */}
@@ -438,7 +579,7 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 onClick={handleGenerateAIEssay}
-                disabled={isGeneratingAI}
+                disabled={isGeneratingAI || isAnalyzingImage}
                 className="py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 transition-all border border-purple-400/30 disabled:opacity-50"
               >
                 <Wand2 className={`w-4 h-4 text-yellow-300 ${isGeneratingAI ? "animate-spin" : ""}`} />
@@ -447,7 +588,8 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
 
               <button
                 onClick={handleDrawRandomVocabToSnap}
-                className="py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                disabled={isAnalyzingImage}
+                className="py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
               >
                 <Shuffle className="w-4 h-4 text-[#00FF88]" />
                 <span>{L("🔀 獲取隨機生詞")}</span>
@@ -461,26 +603,43 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
               </div>
 
               <div
-                onClick={handleGenerateAIEssay}
+                onClick={handleTriggerCamera}
                 className="w-16 h-16 rounded-2xl bg-[#00FF88] text-black mx-auto flex items-center justify-center shadow-lg shadow-[#00FF88]/30 mb-3 active:scale-90 transition-transform cursor-pointer"
               >
-                <Camera className="w-9 h-9" />
+                {isAnalyzingImage ? (
+                  <RefreshCw className="w-8 h-8 animate-spin" />
+                ) : (
+                  <Camera className="w-9 h-9" />
+                )}
               </div>
 
               <h2 className="text-lg font-black text-white uppercase tracking-tight">
-                {L("拍下課本 / 試卷一鍵解析")}
+                {isAnalyzingImage ? L("📷 相片 OCR 正在解析中...") : L("拍下課本 / 試卷一鍵解析")}
               </h2>
               <p className="text-xs text-white/60 mt-1 mb-4">
-                {L("大圖示單手操作 • 自動萃取 DSE 5** 考題生詞")}
+                {L("拍攝或上載課本試卷相片 • 自動萃取 DSE 5** 考題生詞")}
               </p>
 
-              <button
-                onClick={handleGenerateAIEssay}
-                className="w-full py-3.5 bg-[#00FF88] text-black font-black text-sm uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[#00FF88]/20 active:scale-95 transition-all"
-              >
-                <Camera className="w-5 h-5" />
-                <span>{L("一鍵拍攝 / 選擇相片或 AI 生成")}</span>
-              </button>
+              {/* Grid with Camera & Photo Library Triggers */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleTriggerCamera}
+                  disabled={isAnalyzingImage}
+                  className="py-3.5 bg-[#00FF88] text-black font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 shadow-xl shadow-[#00FF88]/20 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>{L("📷 開啟相機拍攝")}</span>
+                </button>
+
+                <button
+                  onClick={handleTriggerPhotoLibrary}
+                  disabled={isAnalyzingImage}
+                  className="py-3.5 bg-white/10 hover:bg-white/20 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-1.5 border border-white/20 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  <Upload className="w-4 h-4 text-[#00FF88]" />
+                  <span>{L("🖼️ 上載相冊相片")}</span>
+                </button>
+              </div>
             </div>
 
             {/* Active Snap Document Card with Karaoke Highlighting */}
