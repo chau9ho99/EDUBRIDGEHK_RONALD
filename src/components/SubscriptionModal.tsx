@@ -9,10 +9,9 @@ import {
   Crown,
   CreditCard,
   Lock,
-  Smartphone,
-  Apple
 } from "lucide-react";
 import { Language } from "../utils/i18n";
+import gatewayImg from "../assets/IMG/ICON/gateway.png";
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -292,35 +291,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           </div>
         </div>
 
-        {/* Trusted Payment Gateways & Mobile App Badges */}
-        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-6 bg-white/[0.02] p-4 sm:p-5 rounded-2xl border border-white/5">
-          {/* Payment Gateway Image */}
-          <div className="flex items-center justify-center md:justify-start">
-            <img
-              src="/assets/IMG/ICON/gateway.png"
-              alt="Supported Payment Gateways"
-              className="max-h-12 sm:max-h-14 object-contain rounded-xl hover:scale-105 transition-transform"
-            />
-          </div>
-
-          {/* App Store & Google Play Coming Soon Badges */}
-          <div className="flex flex-col md:flex-row gap-3 shrink-0 items-center justify-center md:justify-end">
-            <img
-              src="/assets/IMG/ICON/iOS_Android.png"
-              alt="iOS & Android"
-              className="h-9 sm:h-10 object-contain rounded-lg hover:scale-105 transition-transform"
-            />
-            <img
-              src="/assets/IMG/ICON/App_Store_badge.png"
-              alt="App Store (Coming Soon)"
-              className="h-9 sm:h-10 object-contain rounded-lg hover:scale-105 transition-transform"
-            />
-            <img
-              src="/assets/IMG/ICON/Google_Play_badge.png"
-              alt="Google Play (Coming Soon)"
-              className="h-9 sm:h-10 object-contain rounded-lg hover:scale-105 transition-transform"
-            />
-          </div>
+        {/* Trusted Payment Gateways Banner */}
+        <div className="border-t border-white/10 pt-5 flex flex-col items-center justify-center bg-white/[0.02] p-4 sm:p-5 rounded-2xl border border-white/5 w-full">
+          <img
+            src={gatewayImg}
+            alt="Supported Payment Gateways"
+            className="w-full max-w-2xl h-auto max-h-24 sm:max-h-28 object-contain rounded-xl hover:scale-[1.01] transition-transform"
+          />
         </div>
       </div>
     </div>

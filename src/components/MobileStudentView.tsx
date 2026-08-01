@@ -42,6 +42,9 @@ import { SnapItem, VocabWord, StudentProfile } from "../types";
 import { Language, translations, toSimplifiedChinese, getVocabMeaning } from "../utils/i18n";
 import { speakText, stopSpeech } from "../utils/speechUtils";
 import { getRandomDSEVocab } from "../data/dseVocabDatabase";
+import appStoreBadgeImg from "../assets/IMG/ICON/App_Store_badge.png";
+import googlePlayBadgeImg from "../assets/IMG/ICON/Google_Play_badge.png";
+import iosAndroidImg from "../assets/IMG/ICON/iOS_Android.png";
 
 interface MobileStudentViewProps {
   snapItems: SnapItem[];
@@ -1213,17 +1216,17 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
         <div className="pt-6 pb-20 border-t border-white/10 text-center space-y-4">
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <img
-              src="/assets/IMG/ICON/iOS_Android.png"
+              src={iosAndroidImg}
               alt="iOS & Android"
               className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
             />
             <img
-              src="/assets/IMG/ICON/App_Store_badge.png"
+              src={appStoreBadgeImg}
               alt="App Store (Coming Soon)"
               className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
             />
             <img
-              src="/assets/IMG/ICON/Google_Play_badge.png"
+              src={googlePlayBadgeImg}
               alt="Google Play (Coming Soon)"
               className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
             />
