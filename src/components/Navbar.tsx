@@ -11,7 +11,8 @@ import {
   Shield,
   Smartphone,
   Monitor,
-  UserCheck
+  UserCheck,
+  CreditCard
 } from "lucide-react";
 import { Language, translations } from "../utils/i18n";
 import { StudentProfile } from "../types";
@@ -26,6 +27,7 @@ interface NavbarProps {
   studentProfile?: StudentProfile | null;
   onOpenProfileModal?: () => void;
   onOpenPromoModal?: () => void;
+  onOpenSubscriptionModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   studentProfile,
   onOpenProfileModal,
   onOpenPromoModal,
+  onOpenSubscriptionModal,
 }) => {
   const t = translations[lang];
 
@@ -67,13 +70,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isMobileMode ? (
                 <>
                   <Smartphone className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>📱 手機極簡模式 ON</span>
+                  <span>📱 手機版</span>
                 </>
               ) : (
                 <>
                   <Monitor className="w-3.5 h-3.5 text-blue-300" />
-                  <span className="hidden sm:inline">🖥️ 全功能簡報模式</span>
-                  <span className="sm:hidden">🖥️ 簡報</span>
+                  <span>🖥️ 桌面版</span>
                 </>
               )}
             </button>
@@ -113,6 +115,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               EN
             </button>
           </div>
+
+          {/* Subscription Button */}
+          {onOpenSubscriptionModal && (
+            <button
+              onClick={onOpenSubscriptionModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-yellow-300" />
+              <span>{lang === "en" ? "💳 Subscription" : lang === "zh-CN" ? "💳 订阅计划" : "💳 訂閱計劃"}</span>
+            </button>
+          )}
 
           {/* Student Profile Button */}
           {onOpenProfileModal && (
@@ -254,68 +267,70 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Navigation Bar */}
-      <div className="md:hidden flex border-t border-white/15 bg-black/95 backdrop-blur-lg px-2 py-2 justify-around gap-1 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setActiveTab("home")}
-          className={`flex-1 min-w-[60px] flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "home"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <LayoutGrid className="w-5 h-5 mb-1" />
-          <span>{lang === "en" ? "Hub" : lang === "zh-CN" ? "总览" : "總覽"}</span>
-        </button>
+      {/* Mobile Navigation Bar (Shown only in Desktop View on mobile screen sizes) */}
+      {!isMobileMode && (
+        <div className="md:hidden flex border-t border-white/15 bg-black/95 backdrop-blur-lg px-2 py-2 justify-around gap-1 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab("home")}
+            className={`flex-1 min-w-[60px] flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+              activeTab === "home"
+                ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
+                : "text-white/70 hover:text-white bg-white/5 border border-white/10"
+            }`}
+          >
+            <LayoutGrid className="w-5 h-5 mb-1" />
+            <span>{lang === "en" ? "Hub" : lang === "zh-CN" ? "总览" : "總覽"}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("snap")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "snap"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <Camera className="w-5 h-5 mb-1" />
-          <span>{lang === "en" ? "Snap" : lang === "zh-CN" ? "即影即学" : "即影即學"}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("snap")}
+            className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+              activeTab === "snap"
+                ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
+                : "text-white/70 hover:text-white bg-white/5 border border-white/10"
+            }`}
+          >
+            <Camera className="w-5 h-5 mb-1" />
+            <span>{lang === "en" ? "Snap" : lang === "zh-CN" ? "即影即学" : "即影即學"}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("discussion")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "discussion"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <Users className="w-5 h-5 mb-1" />
-          <span>{lang === "en" ? "Oral" : lang === "zh-CN" ? "AI 口试" : "AI 口試"}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("discussion")}
+            className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+              activeTab === "discussion"
+                ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
+                : "text-white/70 hover:text-white bg-white/5 border border-white/10"
+            }`}
+          >
+            <Users className="w-5 h-5 mb-1" />
+            <span>{lang === "en" ? "Oral" : lang === "zh-CN" ? "AI 口试" : "AI 口試"}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("knowledge")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "knowledge"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <Brain className="w-5 h-5 mb-1" />
-          <span>{lang === "en" ? "Cards" : lang === "zh-CN" ? "知识库" : "知識庫"}</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("knowledge")}
+            className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+              activeTab === "knowledge"
+                ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
+                : "text-white/70 hover:text-white bg-white/5 border border-white/10"
+            }`}
+          >
+            <Brain className="w-5 h-5 mb-1" />
+            <span>{lang === "en" ? "Cards" : lang === "zh-CN" ? "知识库" : "知識庫"}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("admin")}
-          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
-            activeTab === "admin"
-              ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
-              : "text-white/70 hover:text-white bg-white/5 border border-white/10"
-          }`}
-        >
-          <Shield className="w-5 h-5 mb-1" />
-          <span>{lang === "en" ? "Admin" : lang === "zh-CN" ? "后台" : "後台"}</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-black uppercase tracking-tight transition-all active:scale-95 ${
+              activeTab === "admin"
+                ? "bg-[#00FF88] text-black shadow-[0_0_18px_rgba(0,255,136,0.4)]"
+                : "text-white/70 hover:text-white bg-white/5 border border-white/10"
+            }`}
+          >
+            <Shield className="w-5 h-5 mb-1" />
+            <span>{lang === "en" ? "Admin" : lang === "zh-CN" ? "后台" : "後台"}</span>
+          </button>
+        </div>
+      )}
     </header>
   );
 };

@@ -11,9 +11,10 @@ import { MobileStudentView } from "./components/MobileStudentView";
 import { HighlightReaderPopover } from "./components/HighlightReaderPopover";
 import { StudentProfileModal } from "./components/StudentProfileModal";
 import { PromoShowcaseModal } from "./components/PromoShowcaseModal";
+import { SubscriptionModal } from "./components/SubscriptionModal";
 import { SnapItem, VocabWord, StudentProfile } from "./types";
 import { SAMPLE_SNAP_ITEMS } from "./data/presetData";
-import { GraduationCap, ArrowLeft, LayoutGrid, Shield } from "lucide-react";
+import { GraduationCap, ArrowLeft, LayoutGrid, Shield, CreditCard, Smartphone, Apple } from "lucide-react";
 import { Language, translations } from "./utils/i18n";
 
 type TabType = "welcome" | "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
@@ -52,6 +53,7 @@ export default function App() {
   });
 
   const [isPromoModalOpen, setIsPromoModalOpen] = useState<boolean>(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
 
   const handleSaveStudentProfile = (profile: StudentProfile) => {
     setStudentProfile(profile);
@@ -214,6 +216,7 @@ export default function App() {
         studentProfile={studentProfile}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenPromoModal={() => setIsPromoModalOpen(true)}
+        onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -229,6 +232,7 @@ export default function App() {
             studentProfile={studentProfile}
             onOpenProfileModal={() => setIsProfileModalOpen(true)}
             onOpenPromoModal={() => setIsPromoModalOpen(true)}
+            onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
           />
         ) : (
           <>
@@ -318,36 +322,70 @@ export default function App() {
 
       {/* Footer / Status Bar */}
       <footer className="border-t border-white/10 bg-[#080808] py-8 px-4 sm:px-6 lg:px-8 text-xs text-white/50 mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF88] text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(0,255,136,0.2)]">
-              <GraduationCap className="w-5 h-5 text-black" />
+        <div className="max-w-7xl mx-auto flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#00FF88] text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(0,255,136,0.2)]">
+                <GraduationCap className="w-5 h-5 text-black" />
+              </div>
+              <div>
+                <p className="font-black tracking-tight text-white uppercase text-sm">
+                  EduBridge <span className="text-[#00FF88]">HK</span>
+                </p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                  {lang === "zh-CN"
+                    ? "专为香港新移民学生适应 HKDSE 课程打造的多模态与多智能体 AI 平台"
+                    : lang === "zh-HK"
+                    ? "專為香港新移民學生適應 HKDSE 課程打造的多模態與多智能體 AI 平台"
+                    : "Multimodal & Multi-agent AI Platform for HK New Immigrant Students Adaptability"}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-black tracking-tight text-white uppercase text-sm">
-                EduBridge <span className="text-[#00FF88]">HK</span>
-              </p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">
-                {lang === "zh-CN"
-                  ? "专为香港新移民学生适应 HKDSE 课程打造的多模态与多智能体 AI 平台"
-                  : lang === "zh-HK"
-                  ? "專為香港新移民學生適應 HKDSE 課程打造的多模態與多智能體 AI 平台"
-                  : "Multimodal & Multi-agent AI Platform for HK New Immigrant Students Adaptability"}
-              </p>
+
+            <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest text-white/40">
+              <button
+                onClick={() => setIsSubscriptionModalOpen(true)}
+                className="hover:text-[#00FF88] text-[#00FF88] transition-colors font-black flex items-center gap-1.5 bg-[#00FF88]/10 border border-[#00FF88]/30 px-2.5 py-1 rounded-lg"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-yellow-300" />
+                <span>{lang === "en" ? "Subscription Plans" : lang === "zh-CN" ? "订阅计划" : "訂閱計劃"}</span>
+              </button>
+              <span className="text-white/20">•</span>
+              <button onClick={() => setActiveTab("investor")} className="hover:text-[#00FF88] transition-colors font-bold">
+                {lang === "zh-CN" ? "商业模式与投资人专区" : lang === "zh-HK" ? "商業模式與投資人專區" : "Business Model & Investor Hub"}
+              </button>
+              <span className="text-white/20">•</span>
+              <button onClick={() => setActiveTab("admin")} className="hover:text-[#00FF88] text-[#00FF88]/90 transition-colors font-bold flex items-center gap-1">
+                <Shield className="w-3 h-3 text-[#00FF88]" />
+                <span>{lang === "zh-CN" ? "AI 架构与后台" : lang === "zh-HK" ? "AI 架構與後台" : "Admin Console"}</span>
+              </button>
+              <span className="text-white/20">•</span>
+              <span className="text-white/30">© 2026 EduBridge HK Tech Ltd. All Rights Reserved.</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest text-white/40">
-            <button onClick={() => setActiveTab("investor")} className="hover:text-[#00FF88] transition-colors font-bold">
-              {lang === "zh-CN" ? "商业模式与投资人专区" : lang === "zh-HK" ? "商業模式與投資人專區" : "Business Model & Investor Hub"}
-            </button>
-            <span className="text-white/20">•</span>
-            <button onClick={() => setActiveTab("admin")} className="hover:text-[#00FF88] text-[#00FF88]/90 transition-colors font-bold flex items-center gap-1">
-              <Shield className="w-3 h-3 text-[#00FF88]" />
-              <span>{lang === "zh-CN" ? "AI 架构与后台" : lang === "zh-HK" ? "AI 架構與後台" : "Admin Console"}</span>
-            </button>
-            <span className="text-white/20">•</span>
-            <span className="text-white/30">© 2026 EduBridge HK Tech Ltd. All Rights Reserved.</span>
+          {/* iOS & Android Support Coming Soon Badges */}
+          <div className="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <img
+                src="/assets/IMG/ICON/iOS_Android.png"
+                alt="iOS & Android Support Coming Soon"
+                className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <img
+                src="/assets/IMG/ICON/App_Store_badge.png"
+                alt="App Store (Coming Soon)"
+                className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
+              />
+              <img
+                src="/assets/IMG/ICON/Google_Play_badge.png"
+                alt="Google Play (Coming Soon)"
+                className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
+              />
+            </div>
           </div>
         </div>
       </footer>
@@ -378,6 +416,13 @@ export default function App() {
           else if (feature === "knowledge") setActiveTab("knowledge");
           else if (feature === "discussion") setActiveTab("discussion");
         }}
+      />
+
+      {/* Subscription Plans & Payment Modal */}
+      <SubscriptionModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setIsSubscriptionModalOpen(false)}
+        lang={lang}
       />
     </div>
   );

@@ -33,7 +33,10 @@ import {
   Music,
   Lightbulb,
   Wand2,
-  FolderHeart
+  FolderHeart,
+  CreditCard,
+  Apple,
+  Lock
 } from "lucide-react";
 import { SnapItem, VocabWord, StudentProfile } from "../types";
 import { Language, translations, toSimplifiedChinese, getVocabMeaning } from "../utils/i18n";
@@ -50,6 +53,7 @@ interface MobileStudentViewProps {
   studentProfile?: StudentProfile | null;
   onOpenProfileModal?: () => void;
   onOpenPromoModal?: () => void;
+  onOpenSubscriptionModal?: () => void;
 }
 
 type MobileTab = "snap" | "audio" | "oral" | "flashcards" | "database";
@@ -129,6 +133,7 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
   studentProfile,
   onOpenProfileModal,
   onOpenPromoModal,
+  onOpenSubscriptionModal,
 }) => {
   const t = translations[lang];
 
@@ -534,17 +539,17 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-[#00FF88] animate-ping" />
             <div className="flex items-center gap-1.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider">
               <Smartphone className="w-3.5 h-3.5 text-yellow-300" />
-              <span>{L("手機極簡模式")}</span>
+              <span>{L("手機版")}</span>
             </div>
           </div>
 
           <button
             onClick={onSwitchToPresentationMode}
             className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-black uppercase tracking-wider border border-white/20 transition-all active:scale-95"
-            title={L("切換回電腦簡報模式")}
+            title={L("切換至桌面版")}
           >
             <Monitor className="w-3.5 h-3.5 text-blue-400" />
-            <span>{L("切換簡報 🖥️")}</span>
+            <span>{L("桌面版 🖥️")}</span>
           </button>
         </div>
 
@@ -561,6 +566,15 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
             )}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {onOpenSubscriptionModal && (
+              <button
+                onClick={onOpenSubscriptionModal}
+                className="px-2 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black rounded-lg text-[10px] uppercase tracking-wider shrink-0 active:scale-95 transition-all border border-emerald-400 flex items-center gap-1"
+              >
+                <CreditCard className="w-3 h-3 text-yellow-300" />
+                <span>{L("訂閱")}</span>
+              </button>
+            )}
             {onOpenPromoModal && (
               <button
                 onClick={onOpenPromoModal}
@@ -1194,6 +1208,31 @@ export const MobileStudentView: React.FC<MobileStudentViewProps> = ({
             )}
           </div>
         )}
+
+        {/* iOS & Android App Support Coming Soon Footer Badge */}
+        <div className="pt-6 pb-20 border-t border-white/10 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <img
+              src="/assets/IMG/ICON/iOS_Android.png"
+              alt="iOS & Android"
+              className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
+            />
+            <img
+              src="/assets/IMG/ICON/App_Store_badge.png"
+              alt="App Store (Coming Soon)"
+              className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
+            />
+            <img
+              src="/assets/IMG/ICON/Google_Play_badge.png"
+              alt="Google Play (Coming Soon)"
+              className="h-8 object-contain rounded-lg hover:scale-105 transition-transform"
+            />
+          </div>
+
+          <p className="text-[10px] text-white/40">
+            © 2026 EduBridge HK AI • Multimodal DSE Learning Platform
+          </p>
+        </div>
 
       </div>
 
