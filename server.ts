@@ -17,6 +17,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "20mb" }));
+app.use("/assets", express.static(path.join(process.cwd(), "public", "assets")));
 app.use("/assets", express.static(path.join(process.cwd(), "assets")));
 
 const apiRouter = express.Router();
