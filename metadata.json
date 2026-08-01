@@ -1,0 +1,11 @@
+{
+  "name": "Remix EduBridge HK Mobile",
+  "description": "AI-Powered EdTech Platform for New Immigrant Students Adapting to HK Curriculum and HKDSE",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
