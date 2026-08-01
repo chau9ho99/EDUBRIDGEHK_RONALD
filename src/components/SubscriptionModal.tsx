@@ -294,32 +294,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
         {/* Trusted Payment Gateways & Mobile App Badges */}
         <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-6 bg-white/[0.02] p-4 sm:p-5 rounded-2xl border border-white/5">
-          {/* Payment Options */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-white/80">
-              <Lock className="w-4 h-4 text-[#00FF88]" />
-              <span>{getText("支援香港主流安全支付方式 (256-bit SSL 加密)", "支持香港主流安全支付方式 (256-bit SSL 加密)", "Secure Payment via Hong Kong Gateway (256-bit SSL)")}</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
-              <span className="px-2.5 py-1 bg-white/10 rounded-lg font-black border border-white/10 flex items-center gap-1 text-[11px]">
-                <CreditCard className="w-3.5 h-3.5 text-blue-400" /> Visa / Mastercard
-              </span>
-              <span className="px-2.5 py-1 bg-white/10 rounded-lg font-black border border-white/10 flex items-center gap-1 text-[11px]">
-                <Apple className="w-3.5 h-3.5 text-white" /> Apple Pay
-              </span>
-              <span className="px-2.5 py-1 bg-white/10 rounded-lg font-black border border-white/10 text-[11px]">
-                🤖 Google Pay
-              </span>
-              <span className="px-2.5 py-1 bg-[#00FF88]/20 text-[#00FF88] rounded-lg font-black border border-[#00FF88]/30 text-[11px]">
-                ⚡ FPS 轉數快
-              </span>
-              <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 rounded-lg font-black border border-blue-500/30 text-[11px]">
-                💙 AlipayHK 支付寶
-              </span>
-              <span className="px-2.5 py-1 bg-green-500/20 text-green-300 rounded-lg font-black border border-green-500/30 text-[11px]">
-                🟢 WeChat Pay 微信
-              </span>
-            </div>
+          {/* Payment Gateway Image */}
+          <div className="flex items-center justify-center md:justify-start">
+            <img
+              src="/assets/IMG/ICON/gateway.png"
+              alt="Supported Payment Gateways"
+              className="max-h-12 sm:max-h-14 object-contain rounded-xl hover:scale-105 transition-transform"
+            />
           </div>
 
           {/* App Store & Google Play Coming Soon Badges */}
