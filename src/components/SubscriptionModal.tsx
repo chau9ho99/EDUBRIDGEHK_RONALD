@@ -11,7 +11,6 @@ import {
   Lock,
 } from "lucide-react";
 import { Language } from "../utils/i18n";
-import gatewayImg from "../assets/IMG/ICON/gateway.png";
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -294,7 +293,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         {/* Trusted Payment Gateways Banner */}
         <div className="border-t border-white/10 pt-5 flex flex-col items-center justify-center bg-white/[0.02] p-4 sm:p-5 rounded-2xl border border-white/5 w-full">
           <img
-            src={gatewayImg}
+            src="/assets/IMG/ICON/gateway.png"
             alt="Supported Payment Gateways"
             className="w-full max-w-2xl h-auto max-h-24 sm:max-h-28 object-contain rounded-xl hover:scale-[1.01] transition-transform"
           />

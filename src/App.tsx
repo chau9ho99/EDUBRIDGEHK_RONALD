@@ -16,9 +16,6 @@ import { SnapItem, VocabWord, StudentProfile } from "./types";
 import { SAMPLE_SNAP_ITEMS } from "./data/presetData";
 import { GraduationCap, ArrowLeft, LayoutGrid, Shield, CreditCard, Smartphone, Apple } from "lucide-react";
 import { Language, translations } from "./utils/i18n";
-import appStoreBadgeImg from "./assets/IMG/ICON/App_Store_badge.png";
-import googlePlayBadgeImg from "./assets/IMG/ICON/Google_Play_badge.png";
-import iosAndroidImg from "./assets/IMG/ICON/iOS_Android.png";
 
 type TabType = "welcome" | "home" | "snap" | "discussion" | "knowledge" | "investor" | "admin";
 
@@ -371,7 +368,7 @@ export default function App() {
           <div className="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img
-                src={iosAndroidImg}
+                src="/assets/IMG/ICON/iOS_Android.png"
                 alt="iOS & Android Support Coming Soon"
                 className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
               />
@@ -379,12 +376,12 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <img
-                src={appStoreBadgeImg}
+                src="/assets/IMG/ICON/App_Store_badge.png"
                 alt="App Store (Coming Soon)"
                 className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
               />
               <img
-                src={googlePlayBadgeImg}
+                src="/assets/IMG/ICON/Google_Play_badge.png"
                 alt="Google Play (Coming Soon)"
                 className="h-9 sm:h-11 object-contain rounded-xl hover:scale-105 transition-transform"
               />
