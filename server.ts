@@ -5,7 +5,20 @@ import { GoogleGenAI } from "@google/genai";
 const app = express();
 const PORT = 3000;
 
+// Enable CORS for Vercel and cross-origin calls
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: "20mb" }));
+
+const apiRouter = express.Router();
 
 // Initialize Gemini Client server-side
 const getGeminiClient = () => {
@@ -238,49 +251,42 @@ async function safeChatMessage(ai: GoogleGenAI, params: {
   throw lastError;
 }
 
-// Unified AI Text Generation Dispatcher with Fallback & Rate Limit Awareness
-async function callAITextGen(params: {
+async function runOpenRouter(params: {
   feature: keyof ProviderConfig;
   systemPrompt?: string;
   prompt?: string;
   messages?: any[];
   jsonOutput?: boolean;
-}): Promise<{ text: string; providerUsed: string; isFallback: boolean; reasoning_details?: any }> {
-  checkDailyReset();
-
-  const preferredProvider = providerConfig[params.feature] || "openrouter";
-
-  // Try OpenRouter if selected and under daily free limit (50 req/day)
-  if (preferredProvider === "openrouter" && providerStats.openrouterCount < providerStats.openrouterLimit) {
-    try {
-      providerStats.openrouterCount++;
-      let systemPrompt = params.systemPrompt;
-      if (params.jsonOutput) {
-        systemPrompt = (systemPrompt ? systemPrompt + "\n\n" : "") +
-          "IMPORTANT: You MUST respond ONLY with valid, raw, parseable JSON code. Do not add conversational intro text.";
-      }
-
-      const res = await callOpenRouterAPI({
-        systemPrompt,
-        prompt: params.prompt,
-        messages: params.messages,
-      });
-
-      providerStats.lastUsedProvider[params.feature] = `openrouter (${res.modelUsed})`;
-
-      return {
-        text: res.content,
-        providerUsed: "openrouter",
-        isFallback: false,
-        reasoning_details: res.reasoning_details,
-      };
-    } catch (err: any) {
-      console.warn(`[AI Provider Abstraction] OpenRouter failed for feature '${params.feature}' (${err.message}). Activating Gemini fallback...`);
-      providerStats.openrouterErrors++;
-    }
+}) {
+  providerStats.openrouterCount++;
+  let systemPrompt = params.systemPrompt;
+  if (params.jsonOutput) {
+    systemPrompt = (systemPrompt ? systemPrompt + "\n\n" : "") +
+      "IMPORTANT: You MUST respond ONLY with valid, raw, parseable JSON code. Do not add conversational intro text.";
   }
 
-  // Gemini Fallback / Direct execution
+  const res = await callOpenRouterAPI({
+    systemPrompt,
+    prompt: params.prompt,
+    messages: params.messages,
+  });
+
+  providerStats.lastUsedProvider[params.feature] = `openrouter (${res.modelUsed})`;
+
+  return {
+    text: res.content,
+    providerUsed: "openrouter",
+    reasoning_details: res.reasoning_details,
+  };
+}
+
+async function runGemini(params: {
+  feature: keyof ProviderConfig;
+  systemPrompt?: string;
+  prompt?: string;
+  messages?: any[];
+  jsonOutput?: boolean;
+}) {
   providerStats.geminiCount++;
   providerStats.lastUsedProvider[params.feature] = "gemini (gemini-3.6-flash)";
   const ai = getGeminiClient();
@@ -294,7 +300,6 @@ async function callAITextGen(params: {
     return {
       text: resp.text || "",
       providerUsed: "gemini",
-      isFallback: preferredProvider === "openrouter",
     };
   } else {
     const contents: any[] = [];
@@ -317,8 +322,49 @@ async function callAITextGen(params: {
     return {
       text: resp.text || "",
       providerUsed: "gemini",
-      isFallback: preferredProvider === "openrouter",
     };
+  }
+}
+
+// Unified AI Text Generation Dispatcher with Reciprocal Fallback
+async function callAITextGen(params: {
+  feature: keyof ProviderConfig;
+  systemPrompt?: string;
+  prompt?: string;
+  messages?: any[];
+  jsonOutput?: boolean;
+}): Promise<{ text: string; providerUsed: string; isFallback: boolean; reasoning_details?: any }> {
+  checkDailyReset();
+
+  const preferredProvider = providerConfig[params.feature] || "openrouter";
+
+  if (preferredProvider === "gemini") {
+    try {
+      const res = await runGemini(params);
+      return { ...res, isFallback: false };
+    } catch (geminiErr: any) {
+      console.warn(`[AI Provider Abstraction] Gemini failed for feature '${params.feature}' (${geminiErr.message}). Activating OpenRouter fallback...`);
+      try {
+        const res = await runOpenRouter(params);
+        return { ...res, isFallback: true };
+      } catch (openRouterErr: any) {
+        throw new Error(`Both Gemini (${geminiErr.message}) and OpenRouter (${openRouterErr.message}) failed.`);
+      }
+    }
+  } else {
+    try {
+      const res = await runOpenRouter(params);
+      return { ...res, isFallback: false };
+    } catch (openRouterErr: any) {
+      console.warn(`[AI Provider Abstraction] OpenRouter failed for feature '${params.feature}' (${openRouterErr.message}). Activating Gemini fallback...`);
+      providerStats.openrouterErrors++;
+      try {
+        const res = await runGemini(params);
+        return { ...res, isFallback: true };
+      } catch (geminiErr: any) {
+        throw new Error(`Both OpenRouter (${openRouterErr.message}) and Gemini (${geminiErr.message}) failed.`);
+      }
+    }
   }
 }
 
@@ -354,33 +400,42 @@ function parseCleanJson(rawText: string): any {
   }
 }
 
-// Admin API Endpoints
-app.get("/api/admin/provider-status", (req, res) => {
-  checkDailyReset();
-  const openrouterKey = process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_KEY;
-  const geminiKey = process.env.GEMINI_API_KEY;
+// Admin API Endpoints using apiRouter
+apiRouter.get("/admin/provider-status", (req, res) => {
+  try {
+    checkDailyReset();
+    const openrouterKey = process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
 
-  res.json({
-    providers: providerConfig,
-    stats: providerStats,
-    openrouterKeyConfigured: !!openrouterKey,
-    geminiKeyConfigured: !!geminiKey,
-    openrouterModel: OPENROUTER_FREE_MODEL,
-  });
-});
-
-app.post("/api/admin/set-provider", (req, res) => {
-  const { feature, provider } = req.body;
-  if (feature && (provider === "openrouter" || provider === "gemini")) {
-    if (feature in providerConfig) {
-      providerConfig[feature as keyof ProviderConfig] = provider;
-    }
+    res.json({
+      providers: providerConfig,
+      stats: providerStats,
+      openrouterKeyConfigured: !!openrouterKey,
+      geminiKeyConfigured: !!geminiKey,
+      openrouterModel: OPENROUTER_FREE_MODEL,
+    });
+  } catch (err: any) {
+    console.error("Error in /admin/provider-status:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch status" });
   }
-  res.json({ success: true, providers: providerConfig });
 });
 
-app.post("/api/admin/test-provider", async (req, res) => {
-  const { provider } = req.body;
+apiRouter.post("/admin/set-provider", (req, res) => {
+  try {
+    const { feature, provider } = req.body || {};
+    if (feature && (provider === "openrouter" || provider === "gemini")) {
+      if (feature in providerConfig) {
+        providerConfig[feature as keyof ProviderConfig] = provider;
+      }
+    }
+    res.json({ success: true, providers: providerConfig });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post("/admin/test-provider", async (req, res) => {
+  const { provider } = req.body || {};
   const startTime = Date.now();
 
   if (provider === "openrouter") {
@@ -424,15 +479,19 @@ app.post("/api/admin/test-provider", async (req, res) => {
   }
 });
 
-app.post("/api/admin/reset-counter", (req, res) => {
-  providerStats.openrouterCount = 0;
-  providerStats.geminiCount = 0;
-  providerStats.openrouterErrors = 0;
-  res.json({ success: true, stats: providerStats });
+apiRouter.post("/admin/reset-counter", (req, res) => {
+  try {
+    providerStats.openrouterCount = 0;
+    providerStats.geminiCount = 0;
+    providerStats.openrouterErrors = 0;
+    res.json({ success: true, stats: providerStats });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // API Endpoint: Real Gemini Audio Speech Evaluation
-app.post("/api/evaluate-speech", async (req, res) => {
+apiRouter.post("/evaluate-speech", async (req, res) => {
   try {
     const { audioBase64, mimeType = "audio/webm", referenceText } = req.body;
     const ai = getGeminiClient();
@@ -534,7 +593,7 @@ Return STRICTLY JSON:
 });
 
 // API Endpoint: Highlighted Selection Translation & Word Analysis
-app.post("/api/translate-selection", async (req, res) => {
+apiRouter.post("/translate-selection", async (req, res) => {
   try {
     const { text, targetLang = "zh-HK" } = req.body;
     if (!text || !text.trim()) {
@@ -594,7 +653,7 @@ Return STRICTLY JSON:
 });
 
 // API Endpoint 1: Snap & Learn OCR & Language Analysis
-app.post("/api/analyze-snap", async (req, res) => {
+apiRouter.post("/analyze-snap", async (req, res) => {
   try {
     const { imageBase64, text, targetLanguage = "en" } = req.body;
     
@@ -710,7 +769,7 @@ Return your response STRICTLY as a JSON object matching this schema:
 });
 
 // API Endpoint 2: Interactive Audio / Text Tutor Query
-app.post("/api/tutor-chat", async (req, res) => {
+apiRouter.post("/tutor-chat", async (req, res) => {
   try {
     const { contextText, chatHistory, userQuestion } = req.body;
 
@@ -751,7 +810,7 @@ Do not include Chinese characters unless specifically asked for a translation wo
 });
 
 // API Endpoint 3: Multi-Agent Group Discussion Simulator (DSE Paper 4 / Chinese Speaking)
-app.post("/api/group-discussion", async (req, res) => {
+apiRouter.post("/group-discussion", async (req, res) => {
   try {
     const { topic, mode = "english", messageHistory = [], lastSpeaker = "user" } = req.body;
 
@@ -819,7 +878,7 @@ Return STRICTLY JSON:
 });
 
 // API Endpoint 4: HKDSE Rubric Evaluation & Performance Report
-app.post("/api/dse-rubric-eval", async (req, res) => {
+apiRouter.post("/dse-rubric-eval", async (req, res) => {
   try {
     const { topic, messageHistory } = req.body;
 
@@ -886,7 +945,7 @@ Return STRICTLY JSON:
 });
 
 // API Endpoint 5: AI Dynamic Generation of New Short DSE Passage
-app.post("/api/generate-passage", async (req, res) => {
+apiRouter.post("/generate-passage", async (req, res) => {
   try {
     const { category, theme } = req.body;
 
@@ -981,7 +1040,7 @@ Return STRICTLY JSON matching this schema:
 });
 
 // API Endpoint 6: AI Dynamic Generation of High-Frequency Vocab
-app.post("/api/generate-vocab", async (req, res) => {
+apiRouter.post("/generate-vocab", async (req, res) => {
   try {
     const { passageText } = req.body;
 
@@ -1035,7 +1094,17 @@ Return STRICTLY JSON matching this schema:
   }
 });
 
-// Start Vite server in dev or serve static build in production
+// Mount apiRouter on both /api prefix and root / prefix to accommodate Vercel rewrites
+app.use("/api", apiRouter);
+app.use("/", apiRouter);
+
+// Global Error Handler for Express
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Global Express Error:", err);
+  res.status(500).json({ error: err.message || "Internal server error" });
+});
+
+// Start Vite server in dev or serve static build in local production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
@@ -1059,6 +1128,16 @@ async function startServer() {
 
 export default app;
 
-if (!process.env.VERCEL) {
+const isServerless = !!(
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.NOW_REGION ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  (process.argv[1] && process.argv[1].includes("/api/"))
+);
+
+if (!isServerless) {
   startServer();
 }
+
+
