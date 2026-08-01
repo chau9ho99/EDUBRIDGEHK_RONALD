@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 
 const app = express();
 const PORT = 3000;
@@ -42,7 +41,12 @@ interface ProviderConfig {
   translation: "openrouter" | "gemini";
 }
 
-const defaultProvider = (process.env.PREFERRED_AI_PROVIDER === "gemini" ? "gemini" : "openrouter") as "openrouter" | "gemini";
+const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
+
+const defaultProvider: "openrouter" | "gemini" =
+  (process.env.PREFERRED_AI_PROVIDER as "openrouter" | "gemini") ||
+  (hasGeminiKey ? "gemini" : hasOpenRouterKey ? "openrouter" : "gemini");
 
 const providerConfig: ProviderConfig = {
   text_generation: defaultProvider,
@@ -1034,6 +1038,7 @@ Return STRICTLY JSON matching this schema:
 // Start Vite server in dev or serve static build in production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
