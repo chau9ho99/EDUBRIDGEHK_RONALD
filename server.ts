@@ -47,23 +47,33 @@ const OPENROUTER_FALLBACK_MODELS = [
   "nvidia/nemotron-3-ultra-550b-a55b:free",
 ];
 
+// LMZH / OpenAI-Compatible Node State
+const lmzhConfig = {
+  apiKey: process.env.LMZH_API_KEY || "",
+  baseUrl: process.env.LMZH_BASE_URL || "https://lmzh.top/v1",
+  model: process.env.LMZH_MODEL || "gpt-5-nano",
+};
+
 // Provider Abstraction State
+type AIProviderOption = "lmzh" | "gemini" | "openrouter";
+
 interface ProviderConfig {
-  text_generation: "openrouter" | "gemini";
-  article_generation: "openrouter" | "gemini";
-  tutor_chat: "openrouter" | "gemini";
-  group_discussion: "openrouter" | "gemini";
-  translation: "openrouter" | "gemini";
+  text_generation: AIProviderOption;
+  article_generation: AIProviderOption;
+  tutor_chat: AIProviderOption;
+  group_discussion: AIProviderOption;
+  translation: AIProviderOption;
   ocr_provider: "groq" | "gemini";
 }
 
 const hasGeminiKey = !!process.env.GEMINI_API_KEY;
 const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
 const hasGroqKey = !!process.env.GROQ_API_KEY;
+const hasLmzhKey = !!(lmzhConfig.apiKey || process.env.LMZH_API_KEY);
 
-const defaultProvider: "openrouter" | "gemini" =
-  (process.env.PREFERRED_AI_PROVIDER as "openrouter" | "gemini") ||
-  (hasGeminiKey ? "gemini" : hasOpenRouterKey ? "openrouter" : "gemini");
+const defaultProvider: AIProviderOption =
+  (process.env.PREFERRED_AI_PROVIDER as AIProviderOption) ||
+  (hasGeminiKey ? "gemini" : hasLmzhKey ? "lmzh" : "gemini");
 
 const providerConfig: ProviderConfig = {
   text_generation: defaultProvider,
@@ -79,8 +89,10 @@ const providerStats = {
   openrouterCount: 0,
   openrouterLimit: 50,
   geminiCount: 0,
+  lmzhCount: 0,
   groqCount: 0,
   openrouterErrors: 0,
+  lmzhErrors: 0,
   groqErrors: 0,
   lastUsedProvider: {} as Record<string, string>,
 };
@@ -91,10 +103,90 @@ function checkDailyReset() {
     providerStats.todayDate = today;
     providerStats.openrouterCount = 0;
     providerStats.geminiCount = 0;
+    providerStats.lmzhCount = 0;
     providerStats.groqCount = 0;
     providerStats.openrouterErrors = 0;
+    providerStats.lmzhErrors = 0;
     providerStats.groqErrors = 0;
   }
+}
+
+// Call LMZH (https://lmzh.top/v1) OpenAI-compatible API
+async function callLMZHAPI(params: {
+  systemPrompt?: string;
+  prompt?: string;
+  messages?: any[];
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+  timeoutMs?: number;
+}): Promise<{ content: string; modelUsed: string }> {
+  const keyToUse = params.apiKey || lmzhConfig.apiKey || process.env.LMZH_API_KEY || "";
+  if (!keyToUse) {
+    throw new Error("LMZH_API_KEY is not configured. Please enter your LMZH API key in the Admin Console.");
+  }
+
+  const urlToUse = params.baseUrl || lmzhConfig.baseUrl || "https://lmzh.top/v1";
+  const modelToUse = params.model || lmzhConfig.model || "gpt-5-2025-08-07";
+
+  const msgs: any[] = [];
+  if (params.systemPrompt) {
+    msgs.push({ role: "system", content: params.systemPrompt });
+  }
+
+  if (params.messages && params.messages.length > 0) {
+    for (const msg of params.messages) {
+      msgs.push({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content || "",
+      });
+    }
+  } else if (params.prompt) {
+    msgs.push({ role: "user", content: params.prompt });
+  }
+
+  const controller = new AbortController();
+  const timeoutMs = params.timeoutMs || 45000; // 45s default timeout for complex JSON generation
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const cleanBase = urlToUse.replace(/\/+$/, "");
+  const endpoint = cleanBase.endsWith("/chat/completions") ? cleanBase : `${cleanBase}/chat/completions`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${keyToUse}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelToUse,
+      messages: msgs,
+      temperature: 0.7,
+    }),
+    signal: controller.signal,
+  });
+  clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`LMZH Node HTTP ${response.status}: ${errText}`);
+  }
+
+  const resJson = await response.json();
+  if (resJson?.error) {
+    throw new Error(`LMZH API error: ${resJson.error.message || JSON.stringify(resJson.error)}`);
+  }
+
+  const choice = resJson?.choices?.[0];
+  const content = choice?.message?.content;
+  if (!content) {
+    throw new Error("Invalid or empty response content from LMZH API node.");
+  }
+
+  return {
+    content,
+    modelUsed: resJson.model || modelToUse,
+  };
 }
 
 // Call Groq Vision API (model: qwen/qwen3.6-27b) for ultra-fast OCR & multimodal analysis
@@ -230,7 +322,7 @@ async function callOpenRouterAPI(params: {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s timeout per candidate
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s fast timeout per candidate
 
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -301,7 +393,7 @@ async function safeGenerateContent(ai: GoogleGenAI, params: {
   fallbackModels?: string[];
 }) {
   const primary = params.primaryModel || "gemini-3.6-flash";
-  const fallbacks = params.fallbackModels || ["gemini-2.5-flash", "gemini-2.5-pro"];
+  const fallbacks = params.fallbackModels || ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
   const modelsToTry = [primary, ...fallbacks];
 
   let lastError: any = null;
@@ -335,7 +427,7 @@ async function safeChatMessage(ai: GoogleGenAI, params: {
   fallbackModels?: string[];
 }) {
   const primary = params.primaryModel || "gemini-3.6-flash";
-  const fallbacks = params.fallbackModels || ["gemini-2.5-flash", "gemini-2.5-pro"];
+  const fallbacks = params.fallbackModels || ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
   const modelsToTry = [primary, ...fallbacks];
 
   let lastError: any = null;
@@ -361,6 +453,37 @@ async function safeChatMessage(ai: GoogleGenAI, params: {
     }
   }
   throw lastError;
+}
+
+async function runLMZH(params: {
+  feature: keyof ProviderConfig;
+  systemPrompt?: string;
+  prompt?: string;
+  messages?: any[];
+  jsonOutput?: boolean;
+}) {
+  providerStats.lmzhCount++;
+  let systemPrompt = params.systemPrompt;
+  if (params.jsonOutput) {
+    systemPrompt = (systemPrompt ? systemPrompt + "\n\n" : "") +
+      "IMPORTANT: You MUST respond ONLY with valid, raw, parseable JSON code. Do not add conversational intro text.";
+  }
+
+  const timeoutMs = (params.feature === "article_generation" || params.feature === "text_generation") ? 60000 : 35000;
+
+  const res = await callLMZHAPI({
+    systemPrompt,
+    prompt: params.prompt,
+    messages: params.messages,
+    timeoutMs,
+  });
+
+  providerStats.lastUsedProvider[params.feature] = `LMZH (${res.modelUsed})`;
+
+  return {
+    text: res.content,
+    providerUsed: `lmzh (${res.modelUsed})`,
+  };
 }
 
 async function runOpenRouter(params: {
@@ -448,14 +571,37 @@ async function callAITextGen(params: {
 }): Promise<{ text: string; providerUsed: string; isFallback: boolean; reasoning_details?: any }> {
   checkDailyReset();
 
-  const preferredProvider = providerConfig[params.feature] || "openrouter";
+  const preferredProvider = providerConfig[params.feature] || (hasGeminiKey ? "gemini" : "lmzh");
 
-  if (preferredProvider === "gemini") {
+  if (preferredProvider === "lmzh") {
+    try {
+      const res = await runLMZH(params);
+      return { ...res, isFallback: false };
+    } catch (lmzhErr: any) {
+      providerStats.lmzhErrors++;
+      console.warn(`[AI Provider Abstraction] LMZH failed for feature '${params.feature}' (${lmzhErr.message}). Falling back to Gemini...`);
+      try {
+        const res = await runGemini(params);
+        return { ...res, isFallback: true };
+      } catch (geminiErr: any) {
+        throw new Error(`Both LMZH (${lmzhErr.message}) and Gemini (${geminiErr.message}) failed.`);
+      }
+    }
+  } else if (preferredProvider === "gemini") {
     try {
       const res = await runGemini(params);
       return { ...res, isFallback: false };
     } catch (geminiErr: any) {
-      if (hasOpenRouterKey) {
+      const activeLmzhKey = lmzhConfig.apiKey || process.env.LMZH_API_KEY;
+      if (activeLmzhKey) {
+        console.warn(`[AI Provider Abstraction] Gemini failed for feature '${params.feature}' (${geminiErr.message}). Activating LMZH fallback...`);
+        try {
+          const res = await runLMZH(params);
+          return { ...res, isFallback: true };
+        } catch (lmzhErr: any) {
+          throw new Error(`Both Gemini (${geminiErr.message}) and LMZH (${lmzhErr.message}) failed.`);
+        }
+      } else if (hasOpenRouterKey) {
         console.warn(`[AI Provider Abstraction] Gemini failed for feature '${params.feature}' (${geminiErr.message}). Activating OpenRouter fallback...`);
         try {
           const res = await runOpenRouter(params);
@@ -522,6 +668,7 @@ apiRouter.get("/admin/provider-status", (req, res) => {
     const openrouterKey = process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
+    const lmzhKey = lmzhConfig.apiKey || process.env.LMZH_API_KEY;
 
     res.json({
       providers: providerConfig,
@@ -529,6 +676,9 @@ apiRouter.get("/admin/provider-status", (req, res) => {
       openrouterKeyConfigured: !!openrouterKey,
       geminiKeyConfigured: !!geminiKey,
       groqKeyConfigured: !!groqKey,
+      lmzhKeyConfigured: !!lmzhKey,
+      lmzhBaseUrl: lmzhConfig.baseUrl,
+      lmzhModel: lmzhConfig.model,
       openrouterModel: OPENROUTER_FREE_MODEL,
       groqModel: "qwen/qwen3.6-27b",
     });
@@ -538,10 +688,28 @@ apiRouter.get("/admin/provider-status", (req, res) => {
   }
 });
 
+apiRouter.post("/admin/set-lmzh-config", (req, res) => {
+  try {
+    const { apiKey, baseUrl, model } = req.body || {};
+    if (apiKey !== undefined) lmzhConfig.apiKey = apiKey.trim();
+    if (baseUrl !== undefined) lmzhConfig.baseUrl = baseUrl.trim() || "https://lmzh.top/v1";
+    if (model !== undefined) lmzhConfig.model = model.trim() || "gpt-5-2025-08-07";
+
+    res.json({
+      success: true,
+      lmzhKeyConfigured: !!(lmzhConfig.apiKey || process.env.LMZH_API_KEY),
+      lmzhBaseUrl: lmzhConfig.baseUrl,
+      lmzhModel: lmzhConfig.model,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post("/admin/set-provider", (req, res) => {
   try {
     const { feature, provider } = req.body || {};
-    if (feature && (provider === "openrouter" || provider === "gemini" || provider === "groq")) {
+    if (feature && (provider === "openrouter" || provider === "gemini" || provider === "groq" || provider === "lmzh")) {
       if (feature in providerConfig) {
         providerConfig[feature as keyof ProviderConfig] = provider as any;
       }
@@ -553,10 +721,34 @@ apiRouter.post("/admin/set-provider", (req, res) => {
 });
 
 apiRouter.post("/admin/test-provider", async (req, res) => {
-  const { provider } = req.body || {};
+  const { provider, lmzhKey, lmzhBaseUrl, lmzhModel } = req.body || {};
   const startTime = Date.now();
 
-  if (provider === "groq") {
+  if (provider === "lmzh") {
+    try {
+      const resVal = await callLMZHAPI({
+        prompt: "Hello! Please reply in 1 short sentence confirming LMZH node operational status.",
+        apiKey: lmzhKey,
+        baseUrl: lmzhBaseUrl,
+        model: lmzhModel,
+      });
+      const duration = Date.now() - startTime;
+      providerStats.lmzhCount++;
+      res.json({
+        success: true,
+        message: `⚡ Successfully connected to LMZH Node (Base URL: ${lmzhBaseUrl || lmzhConfig.baseUrl}, model: ${resVal.modelUsed}). High speed confirmed!`,
+        responseTimeMs: duration,
+        sampleOutput: resVal.content,
+        modelUsed: resVal.modelUsed,
+      });
+    } catch (err: any) {
+      providerStats.lmzhErrors++;
+      res.status(500).json({
+        success: false,
+        message: `LMZH connection failed: ${err.message}`,
+      });
+    }
+  } else if (provider === "groq") {
     try {
       const resVal = await callGroqOCR({
         prompt: "Hello! Please reply in JSON format with key 'status' and value 'operational'.",
@@ -1247,41 +1439,30 @@ apiRouter.post("/generate-passage", async (req, res) => {
   try {
     const { category, theme } = req.body;
 
-    const systemPrompt = `You are an expert HKDSE English Paper 1 Reading & Paper 2 Writing item writer.
-Generate an engaging, educational short reading passage (60-90 words) relevant to Hong Kong secondary school students (e.g. Hong Kong Smart Transportation, Youth Mental Health, AI in HK Schools, Victoria Harbour Cultural Tourism, Climate Resilience in HK).
+    const systemPrompt = `You are an HKDSE English test writer. Generate a concise, high-quality short reading passage (45-60 words) for Hong Kong secondary students.
+Keep output short, structured, and fast.
 
-Return STRICTLY JSON matching this schema:
+Return STRICTLY JSON:
 {
-  "title": "Clear descriptive title in English",
-  "subjectCategory": "DSE English Reading & Vocabulary",
-  "ocrText": "The 60-90 word English passage...",
-  "hkdseContext": "Explanation in Chinese on why this topic is tested in HKDSE",
-  "translation": "Chinese translation of the passage",
-  "speechScript": "The English passage formatted for clear speech reading",
+  "title": "Short title in English",
+  "subjectCategory": "DSE Reading",
+  "ocrText": "Concise 45-60 word HKDSE passage...",
+  "hkdseContext": "1 sentence in Traditional Chinese on HKDSE relevance",
+  "translation": "Traditional Chinese translation",
+  "speechScript": "Same as ocrText",
   "vocabulary": [
     {
-      "word": "High-frequency word",
-      "ipa": "/.../",
-      "level": "DSE Level 4",
-      "meanZh": "Chinese meaning",
-      "meanEn": "English definition",
-      "exampleSentence": "DSE essay style example sentence"
-    },
-    {
-      "word": "Second high-frequency word",
-      "ipa": "/.../",
+      "word": "Target Word",
+      "ipa": "/IPA/",
       "level": "DSE Level 5*",
-      "meanZh": "Chinese meaning",
+      "meanZh": "繁體中文釋義",
       "meanEn": "English definition",
-      "exampleSentence": "DSE essay style example sentence"
+      "exampleSentence": "DSE essay style example sentence."
     }
   ],
-  "grammarNotes": ["Grammar note 1", "Grammar note 2"],
-  "knowledgeTags": ["#DSE_English", "#AI_Generated_Passage"],
-  "suggestedQuestions": [
-    "How to use this key vocabulary in DSE Paper 2 writing?",
-    "Can you read this sentence at 0.8x slow speed?"
-  ]
+  "grammarNotes": ["Key DSE sentence structure or grammar pattern"],
+  "knowledgeTags": ["#DSE_English"],
+  "suggestedQuestions": ["How to use this word in DSE Paper 2?"]
 }`;
 
     const prompt = `Generate a fresh HKDSE short study passage now. Category hint: ${category || theme || "HK Youth & Technology"}`;
