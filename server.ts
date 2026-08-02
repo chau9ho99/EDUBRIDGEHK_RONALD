@@ -1,8 +1,8 @@
 import express from "express";
 import path from "path";
-import adminRoutes from "./server/routes/adminRoutes";
-import speechRoutes from "./server/routes/speechRoutes";
-import learningRoutes from "./server/routes/learningRoutes";
+import adminRoutes from "./server_app/routes/adminRoutes";
+import speechRoutes from "./server_app/routes/speechRoutes";
+import learningRoutes from "./server_app/routes/learningRoutes";
 
 const app = express();
 const PORT = 3000;
