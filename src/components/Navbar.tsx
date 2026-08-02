@@ -46,24 +46,26 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-md border-b border-white/10 text-white shadow-2xl">
-      {/* Top Banner */}
-      <div className="bg-[#000000] px-3 sm:px-4 py-2 text-xs border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-white/80 font-medium">
-          <span className="inline-flex items-center gap-1.5 bg-[#00FF88]/10 text-[#00FF88] px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider border border-[#00FF88]/30">
+      {/* Top Banner (Clean & Non-duplicated Header) */}
+      <div className="bg-[#000000] px-3 sm:px-4 py-2 text-xs border-b border-white/10 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 text-white/80 font-medium shrink-0">
+          <div
+            onClick={() => setActiveTab("welcome")}
+            className="inline-flex items-center gap-1.5 bg-[#00FF88]/10 text-[#00FF88] px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider border border-[#00FF88]/30 cursor-pointer active:scale-95 transition-transform"
+          >
             <Sparkles className="w-3.5 h-3.5 text-[#00FF88]" />
-            <span className="hidden sm:inline">{t.topBanner}</span>
-            <span className="sm:hidden font-black">EduBridge HK AI</span>
-          </span>
+            <span className="font-black">EduBridge HK AI</span>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto shrink-0">
           {/* Mode Switcher Toggle Button */}
           {setIsMobileMode && (
             <button
               onClick={() => setIsMobileMode(!isMobileMode)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm ${
                 isMobileMode
-                  ? "bg-purple-600 text-white border-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                  ? "bg-purple-600 text-white border-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.5)] active:scale-95"
                   : "bg-white/10 text-white/90 border-white/20 hover:bg-white/20"
               }`}
             >
@@ -82,11 +84,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Language Switcher */}
-          <div className="flex items-center gap-1 bg-white/10 border border-white/20 rounded-xl p-1 text-xs font-bold">
+          <div className="flex items-center gap-1 bg-white/10 border border-white/20 rounded-xl p-0.5 text-xs font-bold">
             <Globe className="w-3.5 h-3.5 text-[#00FF88] ml-1 shrink-0" />
             <button
               onClick={() => setLang("zh-CN")}
-              className={`px-2.5 py-1 rounded-lg uppercase transition-all ${
+              className={`px-2 py-0.5 rounded-lg uppercase transition-all ${
                 lang === "zh-CN"
                   ? "bg-[#00FF88] text-black font-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -96,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => setLang("zh-HK")}
-              className={`px-2.5 py-1 rounded-lg uppercase transition-all ${
+              className={`px-2 py-0.5 rounded-lg uppercase transition-all ${
                 lang === "zh-HK"
                   ? "bg-[#00FF88] text-black font-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -106,7 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => setLang("en")}
-              className={`px-2.5 py-1 rounded-lg uppercase transition-all ${
+              className={`px-2 py-0.5 rounded-lg uppercase transition-all ${
                 lang === "en"
                   ? "bg-[#00FF88] text-black font-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -120,10 +122,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onOpenSubscriptionModal && (
             <button
               onClick={onOpenSubscriptionModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-400 shadow-sm hover:scale-105 active:scale-95 shrink-0"
             >
               <CreditCard className="w-3.5 h-3.5 text-yellow-300" />
-              <span>{lang === "en" ? "💳 Subscription" : lang === "zh-CN" ? "💳 订阅计划" : "💳 訂閱計劃"}</span>
+              <span>{lang === "en" ? "💳 Subscription" : lang === "zh-CN" ? "💳 订阅" : "💳 訂閱"}</span>
             </button>
           )}
 
@@ -131,36 +133,37 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onOpenProfileModal && (
             <button
               onClick={onOpenProfileModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-105 active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-400 shadow-sm hover:scale-105 active:scale-95 shrink-0"
             >
               <UserCheck className="w-3.5 h-3.5 text-yellow-300" />
               <span>
                 {studentProfile
                   ? `👤 ${studentProfile.name} (${studentProfile.grade})`
                   : lang === "en"
-                  ? "👤 Student Profile"
+                  ? "👤 Profile"
                   : lang === "zh-CN"
-                  ? "👤 学生档案"
-                  : "👤 學生檔案"}
+                  ? "👤 档案"
+                  : "👤 檔案"}
               </span>
             </button>
           )}
 
           {/* Promo Showcase Modal Trigger */}
-          {onOpenPromoModal && (
+          {onOpenPromoModal && !isMobileMode && (
             <button
               onClick={onOpenPromoModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-purple-600 to-pink-600 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:scale-105 active:scale-95"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-gradient-to-r from-purple-600 to-pink-600 text-white border border-purple-400 shadow-sm hover:scale-105 active:scale-95 shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>{lang === "en" ? "🌟 DSE Cards" : lang === "zh-CN" ? "🌟 DSE 备考卡片" : "🌟 DSE 奪星卡片"}</span>
+              <span>{lang === "en" ? "🌟 DSE Cards" : lang === "zh-CN" ? "🌟 DSE 卡片" : "🌟 DSE 卡片"}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Main Navbar (Rendered only when NOT in mobile mode) */}
+      {!isMobileMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Brand Logo - Links to Landing Page */}
           <div
@@ -266,6 +269,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Mobile Navigation Bar (Shown only in Desktop View on mobile screen sizes) */}
       {!isMobileMode && (
